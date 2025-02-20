@@ -1,0 +1,48 @@
+with-expecter: true
+resolve-type-alias: false
+issue-845-fix: true
+outpkg: mocks
+all: true
+
+packages:
+  github.com/nathakusuma/elevateu-backend/domain/contract:
+    interfaces:
+      include: ["*"]
+    config:
+      filename: "{{.InterfaceName}}_mock.go"
+      dir: "test/unit/mocks/app"
+
+  github.com/nathakusuma/elevateu-backend/pkg/bcrypt:
+    interfaces:
+      include: ["*"]
+    config:
+      filename: "{{.InterfaceName}}_mock.go"
+      dir: "test/unit/mocks/pkg"
+
+  github.com/nathakusuma/elevateu-backend/pkg/jwt:
+    interfaces:
+      include: [ "*" ]
+    config:
+      filename: "{{.InterfaceName}}_mock.go"
+      dir: "test/unit/mocks/pkg"
+
+  github.com/nathakusuma/elevateu-backend/pkg/mail:
+    interfaces:
+      include: [ "*" ]
+    config:
+      filename: "{{.InterfaceName}}_mock.go"
+      dir: "test/unit/mocks/pkg"
+
+  github.com/nathakusuma/elevateu-backend/pkg/uuidpkg:
+    interfaces:
+      include: ["*"]
+    config:
+      filename: "{{.InterfaceName}}_mock.go"
+      dir: "test/unit/mocks/pkg"
+
+  github.com/nathakusuma/elevateu-backend/pkg/randgen:
+    interfaces:
+      include: [ "*" ]
+    config:
+      filename: "{{.InterfaceName}}_mock.go"
+      dir: "test/unit/mocks/pkg"

@@ -1,0 +1,174 @@
+services:
+  server:
+    image: nginx:1.27-alpine
+    ports:
+      - "${APP_PORT}:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - network
+    restart: always
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.4
+    command:
+      - -nginx.scrape-uri=http://server:80/stub_status
+    depends_on:
+      - server
+    networks:
+      - network
+    restart: always
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - PORT=8080
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./storage/logs:/app/storage/logs
+    networks:
+      - network
+    restart: on-failure
+
+  db:
+    image: postgres:17.2
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+      - PORT=${DB_PORT}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - network
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'"]
+      start_interval: 5s
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  postgres-exporter:
+    image: bitnami/postgres-exporter:0.16.0
+    environment:
+      - POSTGRES_EXPORTER_DATA_SOURCE_NAME=postgresql://${DB_USER}:${DB_PASS}@db:${DB_PORT}/${DB_NAME}?sslmode=disable
+      - POSTGRES_EXPORTER_AUTO_DISCOVER_DATABASES=true
+    networks:
+      - network
+    depends_on:
+      - db
+    restart: always
+
+  redis:
+    image: redis:7.4-alpine
+    volumes:
+      - redis:/data
+    networks:
+      - network
+    healthcheck:
+      test:  ["CMD", "redis-cli", "--raw", "incr", "ping" ]
+      start_interval: 5s
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.67.0-alpine
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    networks:
+      - network
+    depends_on:
+      - redis
+    restart: always
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - network
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - network
+    restart: always
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana:/var/lib/grafana
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - network
+    depends_on:
+      - prometheus
+    restart: always
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.18.2
+    volumes:
+      - ./docs/openapi.yaml:/usr/share/swagger/openapi.yaml
+    environment:
+      - SWAGGER_JSON=/usr/share/swagger/openapi.yaml
+      - PORT=8080
+    networks:
+      - network
+    restart: always
+
+  migrate:
+    image: migrate/migrate:4
+    volumes:
+      - ./database/migration:/migration
+    networks:
+      - network
+
+volumes:
+  postgres:
+    driver: local
+  redis:
+    driver: local
+  prometheus:
+    driver: local
+  grafana:
+    driver: local
+
+networks:
+  network:
+    driver: bridge

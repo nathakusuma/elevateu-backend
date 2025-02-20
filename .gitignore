@@ -1,0 +1,18 @@
+.idea/
+.env
+.env.local
+.env.staging
+.env.production
+
+# ignore air (live reload) files
+.air.toml
+tmp
+
+# ignore git files
+.git
+
+# ignore build files
+/build
+
+# test files
+coverage.*
