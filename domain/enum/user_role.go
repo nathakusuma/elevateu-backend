@@ -3,7 +3,9 @@ package enum
 type UserRole string
 
 const (
-	RoleUser UserRole = "user"
+	RoleAdmin   UserRole = "admin"
+	RoleMentor  UserRole = "mentor"
+	RoleStudent UserRole = "student"
 )
 
 func (r UserRole) String() string {

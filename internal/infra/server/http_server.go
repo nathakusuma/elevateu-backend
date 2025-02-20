@@ -1,13 +1,18 @@
 package server
 
 import (
-	"fmt"
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/redis/go-redis/v9"
 
+	authhnd "github.com/nathakusuma/elevateu-backend/internal/app/auth/handler"
+	authrepo "github.com/nathakusuma/elevateu-backend/internal/app/auth/repository"
+	authsvc "github.com/nathakusuma/elevateu-backend/internal/app/auth/service"
+	userhnd "github.com/nathakusuma/elevateu-backend/internal/app/user/handler"
+	userrepo "github.com/nathakusuma/elevateu-backend/internal/app/user/repository"
+	usersvc "github.com/nathakusuma/elevateu-backend/internal/app/user/service"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
 	"github.com/nathakusuma/elevateu-backend/pkg/bcrypt"
@@ -87,5 +92,13 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	api := s.app.Group("/api")
 	v1 := api.Group("/v1")
 
-	fmt.Println(bcryptInstance, jwtAccess, mailer, randomGenerator, uuidInstance, validatorInstance, middlewareInstance, v1)
+	userRepository := userrepo.NewUserRepository(db)
+	authRepository := authrepo.NewAuthRepository(db, rds)
+
+	userService := usersvc.NewUserService(userRepository, bcryptInstance, uuidInstance)
+	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, jwtAccess, mailer,
+		randomGenerator, uuidInstance)
+
+	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
+	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
 }
