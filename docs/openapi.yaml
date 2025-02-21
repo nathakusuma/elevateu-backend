@@ -1,0 +1,678 @@
+openapi: 3.1.0
+info:
+  title: ElevateU
+  version: '1.0.0'
+
+servers:
+  - url: "https://elevateu.nathakusuma.com/api/v1"
+    description: Production server
+  - url: "http://localhost/api/v1"
+    description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserRole:
+      type: string
+      enum: [ user, mentor, admin ]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: [ "string", "null" ]
+          format: uuid
+        name:
+          type: [ "string", "null" ]
+          examples:
+            - "Natha Kusuma"
+        email:
+          type: [ "string", "null" ]
+          format: email
+        role:
+          oneOf:
+            - $ref: '#/components/schemas/UserRole'
+            - type: "null"
+          examples:
+            - "user"
+        bio:
+          type: [ "string", "null" ]
+          examples:
+            - "Seorang programmer pemula yang sedang belajar backend"
+        avatar_url:
+          type: [ "string", "null" ]
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/avatar.jpg"
+        created_at:
+          type: [ "string", "null" ]
+          format: date-time
+        updated_at:
+          type: [ "string", "null" ]
+          format: date-time
+
+    UserMinimal:
+      type: object
+      properties:
+        id:
+          type: [ "string", "null" ]
+          format: uuid
+        name:
+          type: [ "string", "null" ]
+          examples:
+            - "Natha Kusuma"
+        role:
+          oneOf:
+            - $ref: '#/components/schemas/UserRole'
+            - type: "null"
+          examples:
+            - "user"
+        bio:
+          type: [ "string", "null" ]
+          examples:
+            - "Seorang programmer pemula yang sedang belajar backend"
+        avatar_url:
+          type: [ "string", "null" ]
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/avatar.jpg"
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        trace_id:
+          type: string
+          format: uuid
+        validation_errors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+  responses:
+    # Errors
+    ## General
+    ErrInternalServer:
+      description: Internal server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/internal-server-error"
+            title: "Something went wrong in our server. Please try again later."
+            status: 500
+            trace_id: "652e0a03-1c0a-404a-ac47-685d7ecb22d8"
+            instance: "https://elevateu.nathakusuma.com/api/v1/auth/login"
+
+    ErrFailParseRequest:
+      description: Failed to parse request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/fail-parse-request"
+            title: "Failed to parse request. Please check your request format."
+            status: 400
+            instance: "https://elevateu.nathakusuma.com/api/v1/auth/login"
+
+    ErrForbiddenRole:
+      description: Role not allowed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/forbidden-role"
+            title: "You're not allowed to access this resource."
+            status: 403
+            instance: "https://elevateu.nathakusuma.com/api/v1/users"
+
+    ErrForbiddenUser:
+      description: User not allowed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/forbidden-user"
+            title: "You're not allowed to access this resource."
+            status: 403
+            instance: "https://elevateu.nathakusuma.com/api/v1/users/01949e48-9f6b-796b-9611-3c9025493233"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/not-found"
+            title: "Resource not found."
+            status: 404
+            instance: "https://elevateu.nathakusuma.com/api/v1/users/01949e48-9f6b-796b-9611-3c9025493233"
+
+    ErrValidation:
+      description: Validation error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/validation-error"
+            title: "There are invalid fields in your request. Please check and try again"
+            status: 422
+            instance: "https://elevateu.nathakusuma.com/api/v1/auth/register"
+            validation_errors:
+              - email:
+                  tag: "required"
+                  param: ""
+                  translation: "Email is a required field"
+
+    ## Auth
+    ErrCredentialsNotMatch:
+      description: Invalid credentials
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/credentials-not-match"
+            title: "Credentials do not match. Please try again."
+            status: 401
+            instance: "https://elevateu.nathakusuma.com/api/v1/auth/login"
+
+    BearerTokenErrors: # Merge ErrNoBearerToken and ErrInvalidBearerToken
+      description: Authentication failed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          examples:
+            noBearerToken:
+              value:
+                type: "https://elevateu.nathakusuma.com/errors/no-bearer-token"
+                title: "You're not logged in. Please login first."
+                status: 401
+            invalidBearerToken:
+              value:
+                type: "https://elevateu.nathakusuma.com/errors/invalid-bearer-token"
+                title: "Your auth session is invalid. Please renew your auth session."
+                status: 401
+                instance: "https://elevateu.nathakusuma.com/api/v1/users/me"
+
+    ErrInvalidOTP:
+      description: Invalid OTP
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/invalid-otp"
+            title: "Invalid OTP. Please try again or request a new OTP."
+            status: 401
+            instance: "https://elevateu.nathakusuma.com/api/v1/auth/register/otp/check"
+
+    ErrInvalidRefreshToken:
+      description: Invalid refresh token
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/invalid-refresh-token"
+            title: "Auth session is invalid. Please login again."
+            status: 401
+            instance: "https://elevateu.nathakusuma.com/api/v1/auth/refresh"
+
+    ErrEmailAlreadyRegistered:
+      description: Email already registered
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/email-already-registered"
+            title: "Email already registered. Please login or use another email."
+            status: 409
+            instance: "https://elevateu.nathakusuma.com/api/v1/auth/register"
+
+    LoginResponse:
+      description: Login response
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - access_token
+              - refresh_token
+              - user
+            properties:
+              access_token:
+                type: string
+                examples:
+                  - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+              refresh_token:
+                type: string
+                examples:
+                  - "zvXQxgxN2pQD4kci41lhnkwfXKAXtt2l"
+              user:
+                $ref: '#/components/schemas/User'
+
+tags:
+  - name: Auth
+    description: Authentication and authorization operations
+  - name: Users
+    description: User management operations
+
+paths:
+  /auth/register/otp:
+    post:
+      tags:
+        - Auth
+      summary: Request Register OTP
+      operationId: requestRegisterOTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 320
+      responses:
+        '204':
+          description: Success - OTP sent successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '409':
+          $ref: '#/components/responses/ErrEmailAlreadyRegistered'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /auth/register/otp/check:
+    get:
+      tags:
+        - Auth
+      summary: Check Register OTP
+      operationId: checkRegisterOTP
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema:
+            type: string
+            format: email
+        - name: otp
+          in: query
+          required: true
+          schema:
+            type: string
+            examples:
+              - "123456"
+      responses:
+        '204':
+          description: Success - OTP verification successful
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/ErrInvalidOTP'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp
+                - name
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 320
+                otp:
+                  type: string
+                  examples:
+                    - "123456"
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                  pattern: "^[\x00-\x7F]*$"  # ASCII characters only
+                  examples:
+                    - "Natha Kusuma"
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+                  pattern: "^[\x00-\x7F]*$"  # ASCII characters only
+      responses:
+        '201':
+          $ref: '#/components/responses/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/ErrInvalidOTP'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  pattern: "^[\x00-\x7F]*$"  # ASCII characters only
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/ErrCredentialsNotMatch'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: Refresh Access Token
+      operationId: refreshAccessToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  examples:
+                    - "zvXQxgxN2pQD4kci41lhnkwfXKAXtt2l"
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/ErrInvalidRefreshToken'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout
+      operationId: logout
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '204':
+          description: Success - User logged out successfully
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /auth/reset-password/otp:
+    post:
+      tags:
+        - Auth
+      summary: Request Password Reset OTP
+      operationId: requestPasswordResetOTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '204':
+          description: Success - OTP sent successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Auth
+      summary: Reset Password
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - otp
+                - new_password
+              properties:
+                email:
+                  type: string
+                  format: email
+                otp:
+                  type: string
+                  examples:
+                    - "123456"
+                new_password:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+                  pattern: "^[\x00-\x7F]*$"  # ASCII characters only
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/ErrInvalidOTP'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get Current User Profile
+      operationId: getUserMe
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - user
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    patch:
+      tags:
+        - Users
+      summary: Update User Profile
+      description: Update the current user's profile. This method allows partial updates.
+      operationId: updateUserMe
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: [ string, "null" ]
+                  minLength: 3
+                  maxLength: 100
+                  pattern: "^[\x00-\x7F]*$"  # ASCII characters only
+                  examples:
+                    - "Natha Kusuma :)"
+                bio:
+                  type: [ string, "null" ]
+                  maxLength: 500
+                  examples:
+                    - "Seorang programmer pemula yang sedang belajar backend"
+      responses:
+        '204':
+          description: Success - User profile updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get User by ID
+      operationId: getUserById
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - user
+                properties:
+                  user:
+                    $ref: '#/components/schemas/UserMinimal'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Users
+      summary: Delete User
+      description: Deletes a user. Only available to users with admin role.
+      operationId: deleteUser
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - User deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
