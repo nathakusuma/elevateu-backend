@@ -1,6 +1,7 @@
 package fileutil
 
 import (
+	"fmt"
 	"mime/multipart"
 	"net/http"
 )
@@ -23,6 +24,12 @@ func CheckMIMEFileType(file multipart.File, allowed []string) (bool, string, err
 	_, err := file.Read(buffer)
 	if err != nil {
 		return false, "", err
+	}
+
+	// Reset file position to beginning
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return false, "", fmt.Errorf("failed to reset file position: %w", err)
 	}
 
 	fileType := http.DetectContentType(buffer)
