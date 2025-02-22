@@ -12,33 +12,36 @@ import (
 )
 
 type Env struct {
-	AppEnv                    string        `mapstructure:"APP_ENV"`
-	AppPort                   string        `mapstructure:"APP_PORT"`
-	AppURL                    string        `mapstructure:"APP_URL"`
-	FrontendURL               string        `mapstructure:"FRONTEND_URL"`
-	AppName                   string        `mapstructure:"APP_NAME"`
-	DBHost                    string        `mapstructure:"DB_HOST"`
-	DBPort                    string        `mapstructure:"DB_PORT"`
-	DBUser                    string        `mapstructure:"DB_USER"`
-	DBPass                    string        `mapstructure:"DB_PASS"`
-	DBName                    string        `mapstructure:"DB_NAME"`
-	DBSSLMode                 string        `mapstructure:"DB_SSL_MODE"`
-	RedisHost                 string        `mapstructure:"REDIS_HOST"`
-	RedisPort                 string        `mapstructure:"REDIS_PORT"`
-	RedisPass                 string        `mapstructure:"REDIS_PASS"`
-	RedisDB                   int           `mapstructure:"REDIS_DB"`
-	JwtAccessSecretKey        []byte        // JWT_ACCESS_SECRET_KEY
-	JwtAccessExpireDuration   time.Duration // JWT_ACCESS_EXPIRE_DURATION
-	JwtRefreshExpireDuration  time.Duration // JWT_REFRESH_EXPIRE_DURATION
-	SMTPHost                  string        `mapstructure:"SMTP_HOST"`
-	SMTPPort                  int           `mapstructure:"SMTP_PORT"`
-	SMTPUsername              string        `mapstructure:"SMTP_USERNAME"`
-	SMTPEmail                 string        `mapstructure:"SMTP_EMAIL"`
-	SMTPPassword              string        `mapstructure:"SMTP_PASSWORD"`
-	OAuthGoogleClientID       string        `mapstructure:"OAUTH_GOOGLE_CLIENT_ID"`
-	OAuthGoogleClientSecret   string        `mapstructure:"OAUTH_GOOGLE_CLIENT_SECRET"`
-	OAuthFacebookClientID     string        `mapstructure:"OAUTH_FACEBOOK_CLIENT_ID"`
-	OAuthFacebookClientSecret string        `mapstructure:"OAUTH_FACEBOOK_CLIENT_SECRET"`
+	AppEnv                       string        `mapstructure:"APP_ENV"`
+	AppPort                      string        `mapstructure:"APP_PORT"`
+	AppURL                       string        `mapstructure:"APP_URL"`
+	FrontendURL                  string        `mapstructure:"FRONTEND_URL"`
+	AppName                      string        `mapstructure:"APP_NAME"`
+	DBHost                       string        `mapstructure:"DB_HOST"`
+	DBPort                       string        `mapstructure:"DB_PORT"`
+	DBUser                       string        `mapstructure:"DB_USER"`
+	DBPass                       string        `mapstructure:"DB_PASS"`
+	DBName                       string        `mapstructure:"DB_NAME"`
+	DBSSLMode                    string        `mapstructure:"DB_SSL_MODE"`
+	RedisHost                    string        `mapstructure:"REDIS_HOST"`
+	RedisPort                    string        `mapstructure:"REDIS_PORT"`
+	RedisPass                    string        `mapstructure:"REDIS_PASS"`
+	RedisDB                      int           `mapstructure:"REDIS_DB"`
+	JwtAccessSecretKey           []byte        // JWT_ACCESS_SECRET_KEY
+	JwtAccessExpireDuration      time.Duration // JWT_ACCESS_EXPIRE_DURATION
+	JwtRefreshExpireDuration     time.Duration // JWT_REFRESH_EXPIRE_DURATION
+	SMTPHost                     string        `mapstructure:"SMTP_HOST"`
+	SMTPPort                     int           `mapstructure:"SMTP_PORT"`
+	SMTPUsername                 string        `mapstructure:"SMTP_USERNAME"`
+	SMTPEmail                    string        `mapstructure:"SMTP_EMAIL"`
+	SMTPPassword                 string        `mapstructure:"SMTP_PASSWORD"`
+	OAuthGoogleClientID          string        `mapstructure:"OAUTH_GOOGLE_CLIENT_ID"`
+	OAuthGoogleClientSecret      string        `mapstructure:"OAUTH_GOOGLE_CLIENT_SECRET"`
+	OAuthFacebookClientID        string        `mapstructure:"OAUTH_FACEBOOK_CLIENT_ID"`
+	OAuthFacebookClientSecret    string        `mapstructure:"OAUTH_FACEBOOK_CLIENT_SECRET"`
+	GoogleApplicationCredentials string        `mapstructure:"GOOGLE_APPLICATION_CREDENTIALS"`
+	GCPProjectID                 string        `mapstructure:"GCP_PROJECT_ID"`
+	GCPStorageBucketName         string        `mapstructure:"GCP_STORAGE_BUCKET_NAME"`
 }
 
 var (
