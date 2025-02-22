@@ -99,7 +99,7 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 	go func() {
 		err = s.mailer.Send(
 			email,
-			"[Vion] Verify Your Account",
+			"[ElevateU] Verify Your Account",
 			"otp_register_user.html",
 			map[string]interface{}{
 				"otp":  otp,
@@ -358,7 +358,7 @@ func (s *authService) RequestPasswordResetOTP(ctx context.Context, email string)
 	go func() {
 		err = s.mailer.Send(
 			email,
-			"[Vion] Reset Password",
+			"[ElevateU] Reset Password",
 			"otp_reset_password.html",
 			map[string]interface{}{
 				"otp": otp,

@@ -37,7 +37,7 @@ type httpServer struct {
 
 func NewHTTPServer() HTTPServer {
 	config := fiber.Config{
-		AppName:      "Vion",
+		AppName:      "ElevateU",
 		JSONEncoder:  sonic.Marshal,
 		JSONDecoder:  sonic.Unmarshal,
 		ErrorHandler: errorHandler,
@@ -86,7 +86,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	middlewareInstance := middleware.NewMiddleware(jwtAccess)
 
 	s.app.Get("/", func(ctx *fiber.Ctx) error {
-		return ctx.Status(fiber.StatusOK).SendString("Vion Healthy")
+		return ctx.Status(fiber.StatusOK).SendString("ElevateU Healthy")
 	})
 
 	api := s.app.Group("/api")

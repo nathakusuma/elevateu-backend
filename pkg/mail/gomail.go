@@ -61,7 +61,7 @@ func (m *mailer) Send(recipientEmail, subject, templateName string, data map[str
 	}
 
 	mail := gomail.NewMessage()
-	mail.SetHeader("From", "Vion <"+env.GetEnv().SMTPEmail+">")
+	mail.SetHeader("From", "ElevateU <"+env.GetEnv().SMTPEmail+">")
 	mail.SetHeader("To", recipientEmail)
 	mail.SetHeader("Subject", subject)
 	mail.SetBody("text/html", tmplOutput.String())

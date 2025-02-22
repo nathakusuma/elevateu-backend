@@ -75,7 +75,7 @@ func Test_AuthService_RequestOTPRegister(t *testing.T) {
 		mocks.mailer.EXPECT().
 			Send(
 				email,
-				"[Vion] Verify Your Account",
+				"[ElevateU] Verify Your Account",
 				"otp_register_user.html",
 				mock.AnythingOfType("map[string]interface {}"),
 			).RunAndReturn(func(_, _, _ string, _ map[string]interface{}) error {
