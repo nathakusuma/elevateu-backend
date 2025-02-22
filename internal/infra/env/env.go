@@ -73,6 +73,8 @@ func NewEnv() *Env {
 		if err := parseDurations(env); err != nil {
 			log.Fatal().Msgf("[ENV] failed to parse durations: %s", err.Error())
 		}
+
+		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", env.GoogleApplicationCredentials)
 	})
 
 	return env

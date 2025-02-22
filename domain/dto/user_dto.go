@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"fmt"
 	"mime/multipart"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
+	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 )
 
 type UserResponse struct {
@@ -27,9 +29,13 @@ func (u *UserResponse) PopulateFromEntity(user *entity.User) *UserResponse {
 	u.Email = user.Email
 	u.Role = user.Role
 	u.Bio = user.Bio
-	u.AvatarURL = user.AvatarURL
 	u.CreatedAt = &user.CreatedAt
 	u.UpdatedAt = &user.UpdatedAt
+
+	if user.ID != uuid.Nil && user.AvatarURL != nil {
+		signedURL := fileutil.GetSignedURL(fmt.Sprintf("users/avatar/%s", user.ID.String()))
+		u.AvatarURL = &signedURL
+	}
 
 	return u
 }
@@ -39,7 +45,11 @@ func (u *UserResponse) PopulateMinimalFromEntity(user *entity.User) *UserRespons
 	u.Name = user.Name
 	u.Role = user.Role
 	u.Bio = user.Bio
-	u.AvatarURL = user.AvatarURL
+
+	if user.ID != uuid.Nil && user.AvatarURL != nil {
+		signedURL := fileutil.GetSignedURL(fmt.Sprintf("users/avatar/%s", user.ID.String()))
+		u.AvatarURL = &signedURL
+	}
 
 	return u
 }

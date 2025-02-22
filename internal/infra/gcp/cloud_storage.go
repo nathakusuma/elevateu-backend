@@ -11,13 +11,13 @@ import (
 
 var (
 	once   sync.Once
-	client *storage.Client
+	Client *storage.Client
 )
 
 func NewStorageClient() *storage.Client {
 	once.Do(func() {
 		ctx := context.Background()
-		cl, err := storage.NewGRPCClient(ctx)
+		cl, err := storage.NewClient(ctx)
 		if err != nil {
 			log.Fatal(map[string]interface{}{
 				"error": err,
@@ -25,8 +25,8 @@ func NewStorageClient() *storage.Client {
 			return
 		}
 
-		client = cl
+		Client = cl
 	})
 
-	return client
+	return Client
 }
