@@ -76,7 +76,7 @@ func Test_AuthService_RequestOTPRegister(t *testing.T) {
 			Send(
 				email,
 				"[ElevateU] Verify Your Account",
-				"otp_register_user.html",
+				"otp_register.html",
 				mock.AnythingOfType("map[string]interface {}"),
 			).RunAndReturn(func(_, _, _ string, _ map[string]interface{}) error {
 			emailSent <- struct{}{}
@@ -132,7 +132,7 @@ func Test_AuthService_RequestOTPRegister(t *testing.T) {
 			Send(
 				email,
 				"[ElevateU] Verify Your Account",
-				"otp_register_user.html",
+				"otp_register.html",
 				mock.AnythingOfType("map[string]interface {}"),
 			).RunAndReturn(func(_, _, _ string, _ map[string]interface{}) error {
 			emailSent <- struct{}{}
