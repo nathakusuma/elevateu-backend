@@ -100,7 +100,7 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 		err = s.mailer.Send(
 			email,
 			"[ElevateU] Verify Your Account",
-			"otp_register_user.html",
+			"otp_register.html",
 			map[string]interface{}{
 				"otp":  otp,
 				"href": env.GetEnv().FrontendURL + "/verify-email?email=" + url.QueryEscape(email) + "&otp=" + otp,
@@ -262,30 +262,13 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (dto.Log
 		return resp, errorpkg.ErrInvalidRefreshToken
 	}
 
-	// get user by authSession
-	user, err := s.userSvc.GetUserByID(ctx, authSession.UserID)
+	// rotate refresh token
+	accessToken, refreshToken, err := s.generateTokens(ctx, authSession.User.ID, authSession.User.Role)
 	if err != nil {
-		if errors.Is(err, errorpkg.ErrNotFound) {
-			return resp, errorpkg.ErrNotFound.WithDetail("User not found. Please register.")
-		}
-
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"user.id": authSession.UserID,
-		}, "[AuthService][Refresh] failed to get user by ID")
-		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return resp, err
 	}
 
-	accessToken, err := s.jwt.Create(user.ID, user.Role)
-	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"user.id": user.ID,
-		}, "[AuthService][Refresh] failed to generate access token")
-		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
-	}
-
-	userResp := new(dto.UserResponse).PopulateFromEntity(user)
+	userResp := new(dto.UserResponse).PopulateFromEntity(&authSession.User)
 	resp = dto.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -293,8 +276,8 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (dto.Log
 	}
 
 	log.Info(map[string]interface{}{
-		"user.id":    user.ID,
-		"user.email": user.Email,
+		"user.id":    authSession.User.ID,
+		"user.email": authSession.User.Email,
 	}, "[AuthService][Refresh] token refreshed")
 
 	return resp, nil

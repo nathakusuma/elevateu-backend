@@ -131,7 +131,7 @@ func Test_AuthService_RequestOTPRegister(t *testing.T) {
 		mocks.mailer.EXPECT().
 			Send(
 				email,
-				"[Vion] Verify Your Account",
+				"[ElevateU] Verify Your Account",
 				"otp_register_user.html",
 				mock.AnythingOfType("map[string]interface {}"),
 			).RunAndReturn(func(_, _, _ string, _ map[string]interface{}) error {
@@ -594,178 +594,197 @@ func mockLoginExpectations(ctx context.Context, mocks *authServiceMocks, email, 
 		Return(nil)
 }
 
-func Test_AuthService_RefreshToken(t *testing.T) {
+func Test_AuthService_Refresh(t *testing.T) {
 	ctx := context.Background()
-	refreshToken := "valid_refresh_token"
+	refreshToken := "test-refresh-token"
+	newAccessToken := "new-access-token"
+	newRefreshToken := "new-refresh-token"
 	userID := uuid.New()
+
+	mockUser := entity.User{
+		ID:        userID,
+		Name:      "Test User",
+		Email:     "test@example.com",
+		Role:      enum.RoleStudent,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	mockAuthSession := entity.AuthSession{
+		Token:     refreshToken,
+		UserID:    userID,
+		User:      mockUser,
+		ExpiresAt: time.Now().Add(time.Hour), // Valid for 1 hour
+	}
 
 	t.Run("success", func(t *testing.T) {
 		svc, mocks := setupAuthServiceMocks(t)
 
-		// Setup auth session
-		authSession := &entity.AuthSession{
-			Token:     refreshToken,
-			UserID:    userID,
-			ExpiresAt: time.Now().Add(time.Hour), // Valid future expiration
-		}
-
-		// Setup user
-		user := &entity.User{
-			ID:        userID,
-			Email:     "test@example.com",
-			Name:      "Test User",
-			Role:      enum.RoleStudent,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}
-
-		// Set up expectations
+		// Expect to get valid auth session
 		mocks.authRepo.EXPECT().
 			GetAuthSessionByToken(ctx, refreshToken).
-			Return(authSession, nil)
+			Return(&mockAuthSession, nil)
 
-		mocks.userSvc.EXPECT().
-			GetUserByID(ctx, userID).
-			Return(user, nil)
-
+		// Expect token generation
 		mocks.jwt.EXPECT().
-			Create(user.ID, user.Role).
-			Return("new_access_token", nil)
+			Create(userID, enum.RoleStudent).
+			Return(newAccessToken, nil)
 
-		// Execute and verify
+		// Expect random string generation for refresh token
+		mocks.radgen.EXPECT().
+			RandomString(32).
+			Return(newRefreshToken, nil)
+
+		// Expect new auth session creation
+		mocks.authRepo.EXPECT().
+			CreateAuthSession(ctx, mock.AnythingOfType("*entity.AuthSession")).
+			Return(nil)
+
+		// Call the service
 		resp, err := svc.Refresh(ctx, refreshToken)
+
+		// Assert response
 		assert.NoError(t, err)
-		assert.NotEmpty(t, resp.AccessToken)
-		assert.Equal(t, refreshToken, resp.RefreshToken)
-		assert.NotNil(t, resp.User)
-		assert.Equal(t, user.ID, resp.User.ID)
-		assert.Equal(t, user.Email, resp.User.Email)
-		assert.Equal(t, user.Role, resp.User.Role)
+		assert.Equal(t, newAccessToken, resp.AccessToken)
+		assert.Equal(t, newRefreshToken, resp.RefreshToken)
+		assert.Equal(t, mockUser.ID, resp.User.ID)
+		assert.Equal(t, mockUser.Email, resp.User.Email)
+		assert.Equal(t, mockUser.Role, resp.User.Role)
 	})
 
-	t.Run("error - auth session not found", func(t *testing.T) {
+	t.Run("error - invalid refresh token", func(t *testing.T) {
 		svc, mocks := setupAuthServiceMocks(t)
 
+		// Expect auth session not found
 		mocks.authRepo.EXPECT().
 			GetAuthSessionByToken(ctx, refreshToken).
-			Return(nil, errors.New("auth session not found: blablabla"))
+			Return(nil, errors.New("auth session not found"))
 
+		// Call the service
 		resp, err := svc.Refresh(ctx, refreshToken)
-		assert.Empty(t, resp)
+
+		// Assert error
+		assert.Error(t, err)
 		assert.ErrorIs(t, err, errorpkg.ErrInvalidRefreshToken)
+		assert.Empty(t, resp)
 	})
 
-	t.Run("error - get auth session unexpected error", func(t *testing.T) {
+	t.Run("error - expired refresh token", func(t *testing.T) {
 		svc, mocks := setupAuthServiceMocks(t)
 
+		expiredSession := mockAuthSession
+		expiredSession.ExpiresAt = time.Now().Add(-time.Hour) // Expired 1 hour ago
+
+		// Expect to get expired auth session
 		mocks.authRepo.EXPECT().
 			GetAuthSessionByToken(ctx, refreshToken).
-			Return(nil, errors.New("db error"))
+			Return(&expiredSession, nil)
 
+		// Call the service
 		resp, err := svc.Refresh(ctx, refreshToken)
+
+		// Assert error
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, errorpkg.ErrInvalidRefreshToken)
 		assert.Empty(t, resp)
+	})
+
+	t.Run("error - failed to get auth session", func(t *testing.T) {
+		svc, mocks := setupAuthServiceMocks(t)
+
+		// Expect unexpected error when getting auth session
+		mocks.authRepo.EXPECT().
+			GetAuthSessionByToken(ctx, refreshToken).
+			Return(nil, errors.New("unexpected error"))
+
+		// Call the service
+		resp, err := svc.Refresh(ctx, refreshToken)
+
+		// Assert error
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
-	})
-
-	t.Run("error - expired auth session", func(t *testing.T) {
-		svc, mocks := setupAuthServiceMocks(t)
-
-		// Setup expired auth session
-		authSession := &entity.AuthSession{
-			Token:     refreshToken,
-			UserID:    userID,
-			ExpiresAt: time.Now().Add(-time.Hour), // Expired
-		}
-
-		mocks.authRepo.EXPECT().
-			GetAuthSessionByToken(ctx, refreshToken).
-			Return(authSession, nil)
-
-		resp, err := svc.Refresh(ctx, refreshToken)
 		assert.Empty(t, resp)
-		assert.ErrorIs(t, err, errorpkg.ErrInvalidRefreshToken)
 	})
 
-	t.Run("error - user not found", func(t *testing.T) {
+	t.Run("error - failed to generate access token", func(t *testing.T) {
 		svc, mocks := setupAuthServiceMocks(t)
 
-		// Setup valid auth session
-		authSession := &entity.AuthSession{
-			Token:     refreshToken,
-			UserID:    userID,
-			ExpiresAt: time.Now().Add(time.Hour),
-		}
-
+		// Expect to get valid auth session
 		mocks.authRepo.EXPECT().
 			GetAuthSessionByToken(ctx, refreshToken).
-			Return(authSession, nil)
+			Return(&mockAuthSession, nil)
 
-		mocks.userSvc.EXPECT().
-			GetUserByID(ctx, userID).
-			Return(nil, errorpkg.ErrNotFound)
-
-		resp, err := svc.Refresh(ctx, refreshToken)
-		assert.Empty(t, resp)
-		assert.ErrorIs(t, err, errorpkg.ErrNotFound)
-	})
-
-	t.Run("error - get user unexpected error", func(t *testing.T) {
-		svc, mocks := setupAuthServiceMocks(t)
-
-		// Setup valid auth session
-		authSession := &entity.AuthSession{
-			Token:     refreshToken,
-			UserID:    userID,
-			ExpiresAt: time.Now().Add(time.Hour),
-		}
-
-		mocks.authRepo.EXPECT().
-			GetAuthSessionByToken(ctx, refreshToken).
-			Return(authSession, nil)
-
-		mocks.userSvc.EXPECT().
-			GetUserByID(ctx, userID).
-			Return(nil, errors.New("db error"))
-
-		resp, err := svc.Refresh(ctx, refreshToken)
-		assert.Empty(t, resp)
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
-	})
-
-	t.Run("error - jwt creation fails", func(t *testing.T) {
-		svc, mocks := setupAuthServiceMocks(t)
-
-		// Setup valid auth session
-		authSession := &entity.AuthSession{
-			Token:     refreshToken,
-			UserID:    userID,
-			ExpiresAt: time.Now().Add(time.Hour),
-		}
-
-		// Setup user
-		user := &entity.User{
-			ID:   userID,
-			Role: enum.RoleStudent,
-		}
-
-		mocks.authRepo.EXPECT().
-			GetAuthSessionByToken(ctx, refreshToken).
-			Return(authSession, nil)
-
-		mocks.userSvc.EXPECT().
-			GetUserByID(ctx, userID).
-			Return(user, nil)
-
+		// Expect error in token generation
 		mocks.jwt.EXPECT().
-			Create(user.ID, user.Role).
-			Return("", errors.New("jwt error"))
+			Create(userID, enum.RoleStudent).
+			Return("", errors.New("token generation failed"))
 
+		// Call the service
 		resp, err := svc.Refresh(ctx, refreshToken)
-		assert.Empty(t, resp)
+
+		// Assert error
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
+		assert.Empty(t, resp)
+	})
+
+	t.Run("error - failed to generate refresh token", func(t *testing.T) {
+		svc, mocks := setupAuthServiceMocks(t)
+
+		// Expect to get valid auth session
+		mocks.authRepo.EXPECT().
+			GetAuthSessionByToken(ctx, refreshToken).
+			Return(&mockAuthSession, nil)
+
+		// Expect successful access token generation
+		mocks.jwt.EXPECT().
+			Create(userID, enum.RoleStudent).
+			Return(newAccessToken, nil)
+
+		// Expect error in refresh token generation
+		mocks.radgen.EXPECT().
+			RandomString(32).
+			Return("", errors.New("random generation failed"))
+
+		// Call the service
+		resp, err := svc.Refresh(ctx, refreshToken)
+
+		// Assert error
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
+		assert.Empty(t, resp)
+	})
+
+	t.Run("error - failed to create auth session", func(t *testing.T) {
+		svc, mocks := setupAuthServiceMocks(t)
+
+		// Expect to get valid auth session
+		mocks.authRepo.EXPECT().
+			GetAuthSessionByToken(ctx, refreshToken).
+			Return(&mockAuthSession, nil)
+
+		// Expect successful access token generation
+		mocks.jwt.EXPECT().
+			Create(userID, enum.RoleStudent).
+			Return(newAccessToken, nil)
+
+		// Expect successful refresh token generation
+		mocks.radgen.EXPECT().
+			RandomString(32).
+			Return(newRefreshToken, nil)
+
+		// Expect error in creating auth session
+		mocks.authRepo.EXPECT().
+			CreateAuthSession(ctx, mock.AnythingOfType("*entity.AuthSession")).
+			Return(errors.New("failed to create auth session"))
+
+		// Call the service
+		resp, err := svc.Refresh(ctx, refreshToken)
+
+		// Assert error
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
+		assert.Empty(t, resp)
 	})
 }
 
@@ -827,7 +846,7 @@ func Test_AuthService_RequestPasswordResetOTP(t *testing.T) {
 		mocks.mailer.EXPECT().
 			Send(
 				email,
-				"[Vion] Reset Password",
+				"[ElevateU] Reset Password",
 				"otp_reset_password.html",
 				mock.AnythingOfType("map[string]interface {}"),
 			).RunAndReturn(func(_, _, _ string, _ map[string]interface{}) error {
@@ -932,7 +951,7 @@ func Test_AuthService_RequestPasswordResetOTP(t *testing.T) {
 		mocks.mailer.EXPECT().
 			Send(
 				email,
-				"[Vion] Reset Password",
+				"[ElevateU] Reset Password",
 				"otp_reset_password.html",
 				mock.AnythingOfType("map[string]interface {}"),
 			).RunAndReturn(func(_, _, _ string, _ map[string]interface{}) error {

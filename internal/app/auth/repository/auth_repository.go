@@ -78,19 +78,27 @@ func (r *authRepository) GetAuthSessionByToken(ctx context.Context, token string
 	var authSession entity.AuthSession
 
 	statement := `SELECT
-    		token,
-			user_id,
-			expires_at
-		FROM auth_sessions
-		WHERE token = $1
-		`
+        s.token,
+        s.user_id,
+        s.expires_at,
+        u.id AS "user.id",
+        u.role AS "user.role",
+        u.name AS "user.name",
+        u.email AS "user.email",
+        u.bio AS "user.bio",
+        u.avatar_url AS "user.avatar_url",
+        u.created_at AS "user.created_at",
+        u.updated_at AS "user.updated_at"
+    FROM auth_sessions s
+    JOIN users u ON u.id = s.user_id
+    WHERE s.token = $1 AND u.deleted_at IS NULL
+    `
 
 	err := r.db.GetContext(ctx, &authSession, statement, token)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("auth session not found: %w", err)
 		}
-
 		return nil, fmt.Errorf("failed to get auth session by token: %w", err)
 	}
 
