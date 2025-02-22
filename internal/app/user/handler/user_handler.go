@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
@@ -84,6 +85,12 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 	if err := ctx.BodyParser(&req); err != nil {
 		return errorpkg.ErrFailParseRequest
 	}
+
+	avatar, err := ctx.FormFile("avatar")
+	if err != nil && !errors.Is(err, fiber.ErrNotFound) {
+		return errorpkg.ErrFailParseRequest
+	}
+	req.Avatar = avatar
 
 	if err := c.val.ValidateStruct(req); err != nil {
 		return err

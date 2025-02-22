@@ -26,6 +26,14 @@ var (
 		"not-found",
 		"Resource not found.")
 
+	ErrFileTooLarge = NewError(http.StatusRequestEntityTooLarge,
+		"file-too-large",
+		"File size is too large. Please upload smaller file.")
+
+	ErrInvalidFileFormat = NewError(http.StatusUnprocessableEntity,
+		"invalid-file-format",
+		"Invalid file format. Please upload a valid file.")
+
 	ErrValidation = NewError(http.StatusUnprocessableEntity, "validation-error",
 		"There are invalid fields in your request. Please check and try again")
 )

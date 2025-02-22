@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 	"strings"
 
 	"github.com/google/uuid"
@@ -17,20 +19,23 @@ import (
 )
 
 type userService struct {
-	userRepo contract.IUserRepository
-	bcrypt   bcrypt.IBcrypt
-	uuid     uuidpkg.IUUID
+	userRepo    contract.IUserRepository
+	storageRepo contract.IStorageRepository
+	bcrypt      bcrypt.IBcrypt
+	uuid        uuidpkg.IUUID
 }
 
 func NewUserService(
 	userRepo contract.IUserRepository,
+	storageRepo contract.IStorageRepository,
 	bcrypt bcrypt.IBcrypt,
 	uuid uuidpkg.IUUID,
 ) contract.IUserService {
 	return &userService{
-		userRepo: userRepo,
-		bcrypt:   bcrypt,
-		uuid:     uuid,
+		userRepo:    userRepo,
+		storageRepo: storageRepo,
+		bcrypt:      bcrypt,
+		uuid:        uuid,
 	}
 }
 
@@ -177,6 +182,49 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upda
 
 	if req.Bio != nil {
 		user.Bio = req.Bio
+	}
+
+	if req.Avatar != nil {
+		// upload avatar to storage
+		file, err := req.Avatar.Open()
+		if err != nil {
+			traceID := log.ErrorWithTraceID(map[string]interface{}{
+				"error":   err,
+				"user.id": id,
+			}, "[UserService][UpdateUser] Failed to open avatar file")
+			return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		}
+		defer file.Close()
+
+		if req.Avatar.Size > 2*fileutil.MegaByte {
+			return errorpkg.ErrFileTooLarge.WithDetail(
+				fmt.Sprintf("File size is too large (%s). Please upload a file less than 2MB",
+					fileutil.ByteToAppropriateUnit(req.Avatar.Size)))
+		}
+
+		ok, fileType, err := fileutil.CheckMIMEFileType(file, fileutil.ImageContentTypes)
+		if err != nil {
+			traceID := log.ErrorWithTraceID(map[string]interface{}{
+				"error":   err,
+				"user.id": id,
+			}, "[UserService][UpdateUser] Failed to check MIME file type")
+			return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		}
+		if !ok {
+			return errorpkg.ErrInvalidFileFormat.WithDetail(
+				fmt.Sprintf("File type %s is not allowed. Please upload a valid image file", fileType))
+		}
+
+		avatarURL, err := s.storageRepo.Upload(ctx, file, fmt.Sprintf("users/avatar/%s", id.String()))
+		if err != nil {
+			traceID := log.ErrorWithTraceID(map[string]interface{}{
+				"error":   err,
+				"user.id": id,
+			}, "[UserService][UpdateUser] Failed to upload avatar")
+			return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		}
+
+		user.AvatarURL = &avatarURL
 	}
 
 	// update user

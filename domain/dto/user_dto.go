@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"mime/multipart"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,6 +52,7 @@ type CreateUserRequest struct {
 }
 
 type UpdateUserRequest struct {
-	Name *string `json:"name" validate:"omitempty,min=3,max=100,ascii"`
-	Bio  *string `json:"bio"  validate:"omitempty,max=500"`
+	Name   *string               `form:"name" validate:"omitempty,min=3,max=100,ascii"`
+	Bio    *string               `form:"bio"  validate:"omitempty,max=500"`
+	Avatar *multipart.FileHeader `form:"avatar"`
 }
