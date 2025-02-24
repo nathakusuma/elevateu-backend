@@ -1,13 +1,19 @@
 package repository
 
 import (
-	"cloud.google.com/go/storage"
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"cloud.google.com/go/storage"
+
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
-	"io"
-	"time"
+	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 )
 
 type storageRepository struct {
@@ -42,6 +48,42 @@ func (r *storageRepository) Upload(ctx context.Context, file io.Reader, path str
 	return url, nil
 }
 
+func (r *storageRepository) GetSignedURL(originalURL string) (string, error) {
+	bucket := env.GetEnv().GCPStorageBucketName
+	expectedPrefix := "https://storage.googleapis.com/" + bucket + "/"
+
+	// Validate URL format
+	if !strings.HasPrefix(originalURL, expectedPrefix) {
+		return "", fmt.Errorf("invalid URL format: must start with %s", expectedPrefix)
+	}
+
+	// Extract and validate path
+	path := originalURL[len(expectedPrefix):]
+	if path == "" {
+		return "", errors.New("empty path is not allowed")
+	}
+
+	// Check for path traversal attempts
+	if strings.Contains(path, "..") {
+		return "", errors.New("path traversal attempts are not allowed")
+	}
+
+	// Validate path characters
+	if !fileutil.IsValidPath(path) {
+		return "", errors.New("path contains invalid characters")
+	}
+
+	url, err := r.client.Bucket(bucket).SignedURL(path, &storage.SignedURLOptions{
+		Method:  http.MethodGet,
+		Expires: time.Now().Add(10 * time.Minute),
+	})
+	if err != nil {
+		return "", fmt.Errorf("client.Bucket(%q).SignedURL: %w", bucket, err)
+	}
+
+	return url, nil
+}
+
 func (r *storageRepository) Delete(ctx context.Context, path string) error {
 	bucket := env.GetEnv().GCPStorageBucketName
 
@@ -59,8 +101,8 @@ func (r *storageRepository) Delete(ctx context.Context, path string) error {
 	}
 	o = o.If(storage.Conditions{GenerationMatch: attrs.Generation})
 
-	if err := o.Delete(ctx); err != nil {
-		return fmt.Errorf("Object(%q).Delete: %w", path, err)
+	if err2 := o.Delete(ctx); err2 != nil {
+		return fmt.Errorf("Object(%q).Delete: %w", path, err2)
 	}
 
 	return nil

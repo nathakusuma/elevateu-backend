@@ -19,7 +19,7 @@ var ImageContentTypes = []string{
 	"image/webp",
 }
 
-func CheckMIMEFileType(file multipart.File, allowed []string) (bool, string, error) {
+func (u *fileUtil) CheckMIMEFileType(file multipart.File, allowed []string) (bool, string, error) {
 	buffer := make([]byte, 512)
 	_, err := file.Read(buffer)
 	if err != nil {

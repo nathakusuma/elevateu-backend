@@ -8,13 +8,15 @@ var (
 	GigaByte       = 1024 * MegaByte
 )
 
-func ByteToAppropriateUnit(byte int64) string {
-	if byte >= GigaByte {
-		return fmt.Sprintf("%.1fGB", float64(byte)/float64(GigaByte))
-	} else if byte >= MegaByte {
-		return fmt.Sprintf("%.1fMB", float64(byte)/float64(MegaByte))
-	} else if byte >= KiloByte {
-		return fmt.Sprintf("%.1fKB", float64(byte)/float64(KiloByte))
+func ByteToAppropriateUnit(byteUnit int64) string {
+	switch {
+	case byteUnit >= GigaByte:
+		return fmt.Sprintf("%.1fGB", float64(byteUnit)/float64(GigaByte))
+	case byteUnit >= MegaByte:
+		return fmt.Sprintf("%.1fMB", float64(byteUnit)/float64(MegaByte))
+	case byteUnit >= KiloByte:
+		return fmt.Sprintf("%.1fKB", float64(byteUnit)/float64(KiloByte))
+	default:
+		return fmt.Sprintf("%dB", byteUnit)
 	}
-	return fmt.Sprintf("%dB", byte)
 }

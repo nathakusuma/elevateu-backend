@@ -2,9 +2,9 @@ package handler
 
 import (
 	"errors"
-	"github.com/google/uuid"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
@@ -92,8 +92,8 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 	}
 	req.Avatar = avatar
 
-	if err := c.val.ValidateStruct(req); err != nil {
-		return err
+	if err2 := c.val.ValidateStruct(req); err2 != nil {
+		return err2
 	}
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
@@ -101,8 +101,8 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 		return errorpkg.ErrInvalidBearerToken
 	}
 
-	if err := c.svc.UpdateUser(ctx.Context(), userID, req); err != nil {
-		return err
+	if err2 := c.svc.UpdateUser(ctx.Context(), userID, req); err2 != nil {
+		return err2
 	}
 
 	return ctx.SendStatus(fiber.StatusNoContent)

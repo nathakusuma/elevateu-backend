@@ -4,7 +4,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
+
 	"github.com/nathakusuma/elevateu-backend/internal/infra/gcp"
+	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 
 	"github.com/redis/go-redis/v9"
 
@@ -81,6 +83,7 @@ func (s *httpServer) MountMiddlewares() {
 func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	gcpClient := gcp.NewStorageClient()
 	bcryptInstance := bcrypt.GetBcrypt()
+	fileUtil := fileutil.NewFileUtil()
 	jwtAccess := jwt.NewJwt(env.GetEnv().JwtAccessExpireDuration, env.GetEnv().JwtAccessSecretKey)
 	mailer := mail.NewMailDialer()
 	randomGenerator := randgen.GetRandGen()
@@ -99,7 +102,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	userRepository := userrepo.NewUserRepository(db)
 	authRepository := authrepo.NewAuthRepository(db, rds)
 
-	userService := usersvc.NewUserService(userRepository, storageRepository, bcryptInstance, uuidInstance)
+	userService := usersvc.NewUserService(userRepository, storageRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, jwtAccess, mailer,
 		randomGenerator, uuidInstance)
 
