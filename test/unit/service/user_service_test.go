@@ -1,13 +1,18 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"mime/multipart"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
@@ -16,25 +21,30 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/internal/app/user/service"
+	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 	appmocks "github.com/nathakusuma/elevateu-backend/test/unit/mocks/app"
 	pkgmocks "github.com/nathakusuma/elevateu-backend/test/unit/mocks/pkg"
 	_ "github.com/nathakusuma/elevateu-backend/test/unit/setup" // Initialize test environment
 )
 
 type userServiceMocks struct {
-	userRepo *appmocks.MockIUserRepository
-	uuid     *pkgmocks.MockIUUID
-	bcrypt   *pkgmocks.MockIBcrypt
+	userRepo    *appmocks.MockIUserRepository
+	storageRepo *appmocks.MockIStorageRepository
+	bcrypt      *pkgmocks.MockIBcrypt
+	fileUtil    *pkgmocks.MockIFileUtil
+	uuid        *pkgmocks.MockIUUID
 }
 
 func setupUserServiceTest(t *testing.T) (contract.IUserService, *userServiceMocks) {
 	mocks := &userServiceMocks{
-		userRepo: appmocks.NewMockIUserRepository(t),
-		uuid:     pkgmocks.NewMockIUUID(t),
-		bcrypt:   pkgmocks.NewMockIBcrypt(t),
+		userRepo:    appmocks.NewMockIUserRepository(t),
+		storageRepo: appmocks.NewMockIStorageRepository(t),
+		bcrypt:      pkgmocks.NewMockIBcrypt(t),
+		fileUtil:    pkgmocks.NewMockIFileUtil(t),
+		uuid:        pkgmocks.NewMockIUUID(t),
 	}
 
-	svc := service.NewUserService(mocks.userRepo, mocks.bcrypt, mocks.uuid)
+	svc := service.NewUserService(mocks.userRepo, mocks.storageRepo, mocks.bcrypt, mocks.fileUtil, mocks.uuid)
 
 	return svc, mocks
 }
@@ -200,7 +210,7 @@ func Test_UserService_GetUserByEmail(t *testing.T) {
 	ctx := context.Background()
 	email := "test@example.com"
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("success - without avatar", func(t *testing.T) {
 		svc, mocks := setupUserServiceTest(t)
 
 		expectedUser := &entity.User{
@@ -219,6 +229,36 @@ func Test_UserService_GetUserByEmail(t *testing.T) {
 		user, err := svc.GetUserByEmail(ctx, email)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedUser, user)
+	})
+
+	t.Run("success - with avatar", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		avatarURL := "storage/avatar.jpg"
+		signedURL := "https://storage.com/signed/avatar.jpg"
+
+		expectedUser := &entity.User{
+			ID:        uuid.New(),
+			Name:      "Test User",
+			Email:     email,
+			Role:      enum.RoleStudent,
+			AvatarURL: &avatarURL,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "email", email).
+			Return(expectedUser, nil)
+
+		mocks.storageRepo.EXPECT().
+			GetSignedURL(avatarURL).
+			Return(signedURL, nil)
+
+		user, err := svc.GetUserByEmail(ctx, email)
+		assert.NoError(t, err)
+		assert.NotNil(t, user)
+		assert.Equal(t, signedURL, *user.AvatarURL)
 	})
 
 	t.Run("error - user not found", func(t *testing.T) {
@@ -245,13 +285,41 @@ func Test_UserService_GetUserByEmail(t *testing.T) {
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
 	})
+
+	t.Run("error - storage signed URL error", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		avatarURL := "storage/avatar.jpg"
+		expectedUser := &entity.User{
+			ID:        uuid.New(),
+			Name:      "Test User",
+			Email:     email,
+			Role:      enum.RoleStudent,
+			AvatarURL: &avatarURL,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "email", email).
+			Return(expectedUser, nil)
+
+		mocks.storageRepo.EXPECT().
+			GetSignedURL(avatarURL).
+			Return("", errors.New("storage error"))
+
+		user, err := svc.GetUserByEmail(ctx, email)
+		assert.Nil(t, user)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
+	})
 }
 
 func Test_UserService_GetUserByID(t *testing.T) {
 	ctx := context.Background()
 	id := uuid.New()
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("success - without avatar", func(t *testing.T) {
 		svc, mocks := setupUserServiceTest(t)
 
 		expectedUser := &entity.User{
@@ -272,6 +340,36 @@ func Test_UserService_GetUserByID(t *testing.T) {
 		assert.Equal(t, expectedUser, user)
 	})
 
+	t.Run("success - with avatar", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		avatarURL := "storage/avatar.jpg"
+		signedURL := "https://storage.com/signed/avatar.jpg"
+
+		expectedUser := &entity.User{
+			ID:        id,
+			Name:      "Test User",
+			Email:     "test@example.com",
+			Role:      enum.RoleStudent,
+			AvatarURL: &avatarURL,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "id", id.String()).
+			Return(expectedUser, nil)
+
+		mocks.storageRepo.EXPECT().
+			GetSignedURL(avatarURL).
+			Return(signedURL, nil)
+
+		user, err := svc.GetUserByID(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, user)
+		assert.Equal(t, signedURL, *user.AvatarURL)
+	})
+
 	t.Run("error - user not found", func(t *testing.T) {
 		svc, mocks := setupUserServiceTest(t)
 
@@ -290,6 +388,34 @@ func Test_UserService_GetUserByID(t *testing.T) {
 		mocks.userRepo.EXPECT().
 			GetUserByField(ctx, "id", id.String()).
 			Return(nil, errors.New("db error"))
+
+		user, err := svc.GetUserByID(ctx, id)
+		assert.Nil(t, user)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
+	})
+
+	t.Run("error - storage signed URL error", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		avatarURL := "storage/avatar.jpg"
+		expectedUser := &entity.User{
+			ID:        id,
+			Name:      "Test User",
+			Email:     "test@example.com",
+			Role:      enum.RoleStudent,
+			AvatarURL: &avatarURL,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "id", id.String()).
+			Return(expectedUser, nil)
+
+		mocks.storageRepo.EXPECT().
+			GetSignedURL(avatarURL).
+			Return("", errors.New("storage error"))
 
 		user, err := svc.GetUserByID(ctx, id)
 		assert.Nil(t, user)
@@ -550,6 +676,284 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			Return(errors.New("db error"))
 
 		err := svc.UpdateUser(ctx, userID, req)
+		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
+	})
+
+	t.Run("success - update avatar", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		existingUser := &entity.User{
+			ID:        userID,
+			Name:      "Original Name",
+			Email:     "test@example.com",
+			Bio:       nil,
+			Role:      enum.RoleStudent,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		// Create a multipart form file
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile("avatar", "test.jpg")
+		assert.NoError(t, err)
+
+		// Write some test image content
+		imageContent := []byte("mock image content")
+		_, err = part.Write(imageContent)
+		assert.NoError(t, err)
+		writer.Close()
+
+		// Read the form back to get the FileHeader
+		reader := multipart.NewReader(body, writer.Boundary())
+		form, err := reader.ReadForm(2 * fileutil.MegaByte)
+		assert.NoError(t, err)
+
+		avatar := form.File["avatar"][0]
+		req := dto.UpdateUserRequest{
+			Avatar: avatar,
+		}
+
+		// Expect to get user by ID
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "id", userID.String()).
+			Return(existingUser, nil)
+
+		// Mock MIME type checking
+		mocks.fileUtil.EXPECT().
+			CheckMIMEFileType(mock.Anything, fileutil.ImageContentTypes).
+			Return(true, "image/jpeg", nil)
+
+		// Mock storage upload
+		expectedAvatarURL := "https://storage.example.com/users/avatar/" + userID.String()
+		mocks.storageRepo.EXPECT().
+			Upload(ctx, mock.Anything, fmt.Sprintf("users/avatar/%s", userID.String())).
+			Return(expectedAvatarURL, nil)
+
+		// Expect user update with new avatar URL
+		expectedUpdatedUser := *existingUser
+		expectedUpdatedUser.AvatarURL = &expectedAvatarURL
+		mocks.userRepo.EXPECT().
+			UpdateUser(ctx, &expectedUpdatedUser).
+			Return(nil)
+
+		err = svc.UpdateUser(ctx, userID, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("error - avatar file too large", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		existingUser := &entity.User{
+			ID:        userID,
+			Name:      "Original Name",
+			Email:     "test@example.com",
+			Role:      enum.RoleStudent,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		// Create a multipart form file that's too large
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile("avatar", "large.jpg")
+		assert.NoError(t, err)
+
+		// Write content that exceeds the limit
+		largeContent := bytes.Repeat([]byte("a"), 3*int(fileutil.MegaByte))
+		_, err = part.Write(largeContent)
+		assert.NoError(t, err)
+		writer.Close()
+
+		// Read the form back to get the FileHeader
+		reader := multipart.NewReader(body, writer.Boundary())
+		form, err := reader.ReadForm(4 * fileutil.MegaByte)
+		assert.NoError(t, err)
+
+		avatar := form.File["avatar"][0]
+		req := dto.UpdateUserRequest{
+			Avatar: avatar,
+		}
+
+		// Expect to get user by ID
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "id", userID.String()).
+			Return(existingUser, nil)
+
+		err = svc.UpdateUser(ctx, userID, req)
+		assert.ErrorIs(t, err, errorpkg.ErrFileTooLarge)
+	})
+
+	t.Run("error - invalid file format", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		existingUser := &entity.User{
+			ID:        userID,
+			Name:      "Original Name",
+			Email:     "test@example.com",
+			Role:      enum.RoleStudent,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		// Create a multipart form file
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile("avatar", "test.txt")
+		assert.NoError(t, err)
+
+		_, err = part.Write([]byte("text content"))
+		assert.NoError(t, err)
+		writer.Close()
+
+		// Read the form back to get the FileHeader
+		reader := multipart.NewReader(body, writer.Boundary())
+		form, err := reader.ReadForm(2 * fileutil.MegaByte)
+		assert.NoError(t, err)
+
+		avatar := form.File["avatar"][0]
+		req := dto.UpdateUserRequest{
+			Avatar: avatar,
+		}
+
+		// Expect to get user by ID
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "id", userID.String()).
+			Return(existingUser, nil)
+
+		// Mock MIME type checking - returns invalid format
+		mocks.fileUtil.EXPECT().
+			CheckMIMEFileType(mock.Anything, fileutil.ImageContentTypes).
+			Return(false, "text/plain", nil)
+
+		err = svc.UpdateUser(ctx, userID, req)
+		assert.ErrorIs(t, err, errorpkg.ErrInvalidFileFormat)
+	})
+
+	t.Run("error - storage upload failure", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		existingUser := &entity.User{
+			ID:        userID,
+			Name:      "Original Name",
+			Email:     "test@example.com",
+			Role:      enum.RoleStudent,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		// Create a multipart form file
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile("avatar", "test.jpg")
+		assert.NoError(t, err)
+
+		_, err = part.Write([]byte("image content"))
+		assert.NoError(t, err)
+		writer.Close()
+
+		// Read the form back to get the FileHeader
+		reader := multipart.NewReader(body, writer.Boundary())
+		form, err := reader.ReadForm(2 * fileutil.MegaByte)
+		assert.NoError(t, err)
+
+		avatar := form.File["avatar"][0]
+		req := dto.UpdateUserRequest{
+			Avatar: avatar,
+		}
+
+		// Expect to get user by ID
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "id", userID.String()).
+			Return(existingUser, nil)
+
+		// Mock MIME type checking
+		mocks.fileUtil.EXPECT().
+			CheckMIMEFileType(mock.Anything, fileutil.ImageContentTypes).
+			Return(true, "image/jpeg", nil)
+
+		// Mock storage upload failure
+		mocks.storageRepo.EXPECT().
+			Upload(ctx, mock.Anything, fmt.Sprintf("users/avatar/%s", userID.String())).
+			Return("", errors.New("storage error"))
+
+		err = svc.UpdateUser(ctx, userID, req)
+		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
+	})
+
+	t.Run("error - failed to open avatar file", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		existingUser := &entity.User{
+			ID:        userID,
+			Name:      "Original Name",
+			Email:     "test@example.com",
+			Role:      enum.RoleStudent,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		avatar := &multipart.FileHeader{
+			Filename: "test.jpg",
+			Size:     100,
+		}
+
+		req := dto.UpdateUserRequest{
+			Avatar: avatar,
+		}
+
+		// Expect to get user by ID
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "id", userID.String()).
+			Return(existingUser, nil)
+
+		err := svc.UpdateUser(ctx, userID, req)
+		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
+	})
+
+	t.Run("error - MIME type check failure", func(t *testing.T) {
+		svc, mocks := setupUserServiceTest(t)
+
+		existingUser := &entity.User{
+			ID:        userID,
+			Name:      "Original Name",
+			Email:     "test@example.com",
+			Role:      enum.RoleStudent,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		// Create a multipart form file that will cause MIME check to fail
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile("avatar", "test.jpg")
+		require.NoError(t, err)
+
+		_, err = part.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF}) // Invalid bytes
+		require.NoError(t, err)
+		writer.Close()
+
+		// Read the form back to get the FileHeader
+		reader := multipart.NewReader(body, writer.Boundary())
+		form, err := reader.ReadForm(2 * fileutil.MegaByte)
+		require.NoError(t, err)
+
+		avatar := form.File["avatar"][0]
+		req := dto.UpdateUserRequest{
+			Avatar: avatar,
+		}
+
+		// Expect to get user by ID
+		mocks.userRepo.EXPECT().
+			GetUserByField(ctx, "id", userID.String()).
+			Return(existingUser, nil)
+
+		// Mock MIME type checking to return error
+		mocks.fileUtil.EXPECT().
+			CheckMIMEFileType(mock.Anything, fileutil.ImageContentTypes).
+			Return(false, "", errors.New("failed to check MIME type"))
+
+		err = svc.UpdateUser(ctx, userID, req)
 		assert.ErrorIs(t, err, errorpkg.ErrInternalServer)
 	})
 }

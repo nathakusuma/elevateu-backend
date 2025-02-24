@@ -46,3 +46,10 @@ packages:
     config:
       filename: "{{.InterfaceName}}_mock.go"
       dir: "test/unit/mocks/pkg"
+
+  github.com/nathakusuma/elevateu-backend/pkg/fileutil:
+    interfaces:
+      include: [ "*" ]
+    config:
+      filename: "{{.InterfaceName}}_mock.go"
+      dir: "test/unit/mocks/pkg"
