@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/iamolegga/enviper"
+	"github.com/midtrans/midtrans-go"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
@@ -42,6 +43,8 @@ type Env struct {
 	GoogleApplicationCredentials string        `mapstructure:"GOOGLE_APPLICATION_CREDENTIALS"`
 	GCPProjectID                 string        `mapstructure:"GCP_PROJECT_ID"`
 	GCPStorageBucketName         string        `mapstructure:"GCP_STORAGE_BUCKET_NAME"`
+	MidtransServerKey            string        `mapstructure:"MIDTRANS_SERVER_KEY"`
+	MidtransEnvironment          midtrans.EnvironmentType
 }
 
 var (
@@ -75,6 +78,10 @@ func NewEnv() *Env {
 		}
 
 		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", env.GoogleApplicationCredentials)
+		env.MidtransEnvironment = midtrans.Sandbox
+		if env.AppEnv == "production" {
+			env.MidtransEnvironment = midtrans.Production
+		}
 	})
 
 	return env
