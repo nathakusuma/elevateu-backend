@@ -20,26 +20,23 @@ import (
 )
 
 type userService struct {
-	userRepo    contract.IUserRepository
-	storageRepo contract.IStorageRepository
-	bcrypt      bcrypt.IBcrypt
-	fileUtil    fileutil.IFileUtil
-	uuid        uuidpkg.IUUID
+	userRepo contract.IUserRepository
+	bcrypt   bcrypt.IBcrypt
+	fileUtil fileutil.IFileUtil
+	uuid     uuidpkg.IUUID
 }
 
 func NewUserService(
 	userRepo contract.IUserRepository,
-	storageRepo contract.IStorageRepository,
 	bcrypt bcrypt.IBcrypt,
 	fileUtil fileutil.IFileUtil,
 	uuid uuidpkg.IUUID,
 ) contract.IUserService {
 	return &userService{
-		userRepo:    userRepo,
-		storageRepo: storageRepo,
-		bcrypt:      bcrypt,
-		fileUtil:    fileUtil,
-		uuid:        uuid,
+		userRepo: userRepo,
+		bcrypt:   bcrypt,
+		fileUtil: fileUtil,
+		uuid:     uuid,
 	}
 }
 
@@ -124,7 +121,7 @@ func (s *userService) getUserByField(ctx context.Context, field, value string) (
 	}
 
 	if user.AvatarURL != nil {
-		avatarURL, err2 := s.storageRepo.GetSignedURL(*user.AvatarURL)
+		avatarURL, err2 := s.fileUtil.GetSignedURL(*user.AvatarURL)
 		if err2 != nil {
 			traceID := log.ErrorWithTraceID(map[string]interface{}{
 				"error": err,
@@ -286,7 +283,7 @@ func (s *userService) handleAvatarUpload(ctx context.Context, avatar *multipart.
 			fmt.Sprintf("File type %s is not allowed. Please upload a valid image file", fileType))
 	}
 
-	avatarURL, err := s.storageRepo.Upload(ctx, file, fmt.Sprintf("users/avatar/%s", userID.String()))
+	avatarURL, err := s.fileUtil.Upload(ctx, file, fmt.Sprintf("users/avatar/%s", userID.String()))
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,

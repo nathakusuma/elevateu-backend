@@ -1,4 +1,4 @@
-package repository
+package fileutil
 
 import (
 	"context"
@@ -11,29 +11,17 @@ import (
 
 	"cloud.google.com/go/storage"
 
-	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
-	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 )
 
-type storageRepository struct {
-	client *storage.Client
-}
-
-func NewStorageRepository(client *storage.Client) contract.IStorageRepository {
-	return &storageRepository{
-		client: client,
-	}
-}
-
-func (r *storageRepository) Upload(ctx context.Context, file io.Reader, path string) (string, error) {
+func (u *fileUtil) Upload(ctx context.Context, file io.Reader, path string) (string, error) {
 	bucket := env.GetEnv().GCPStorageBucketName
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
 
 	// Upload an object with storage.Writer.
-	wc := r.client.Bucket(bucket).Object(path).NewWriter(ctx)
+	wc := u.client.Bucket(bucket).Object(path).NewWriter(ctx)
 
 	if _, err := io.Copy(wc, file); err != nil {
 		return "", fmt.Errorf("io.Copy: %w", err)
@@ -48,7 +36,7 @@ func (r *storageRepository) Upload(ctx context.Context, file io.Reader, path str
 	return url, nil
 }
 
-func (r *storageRepository) GetSignedURL(originalURL string) (string, error) {
+func (u *fileUtil) GetSignedURL(originalURL string) (string, error) {
 	bucket := env.GetEnv().GCPStorageBucketName
 	expectedPrefix := "https://storage.googleapis.com/" + bucket + "/"
 
@@ -69,11 +57,11 @@ func (r *storageRepository) GetSignedURL(originalURL string) (string, error) {
 	}
 
 	// Validate path characters
-	if !fileutil.IsValidPath(path) {
+	if !IsValidPath(path) {
 		return "", errors.New("path contains invalid characters")
 	}
 
-	url, err := r.client.Bucket(bucket).SignedURL(path, &storage.SignedURLOptions{
+	url, err := u.client.Bucket(bucket).SignedURL(path, &storage.SignedURLOptions{
 		Method:  http.MethodGet,
 		Expires: time.Now().Add(10 * time.Minute),
 	})
@@ -84,13 +72,27 @@ func (r *storageRepository) GetSignedURL(originalURL string) (string, error) {
 	return url, nil
 }
 
-func (r *storageRepository) Delete(ctx context.Context, path string) error {
+func (u *fileUtil) GetUploadSignedURL(path string) (string, error) {
+	bucket := env.GetEnv().GCPStorageBucketName
+
+	url, err := u.client.Bucket(bucket).SignedURL(path, &storage.SignedURLOptions{
+		Method:  http.MethodPut,
+		Expires: time.Now().Add(10 * time.Minute),
+	})
+	if err != nil {
+		return "", fmt.Errorf("client.Bucket(%q).SignedURL: %w", bucket, err)
+	}
+
+	return url, nil
+}
+
+func (u *fileUtil) Delete(ctx context.Context, path string) error {
 	bucket := env.GetEnv().GCPStorageBucketName
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 	defer cancel()
 
-	o := r.client.Bucket(bucket).Object(path)
+	o := u.client.Bucket(bucket).Object(path)
 
 	// Set a generation-match precondition to avoid potential race
 	// conditions and data corruptions. The request to delete the file is aborted

@@ -16,7 +16,6 @@ import (
 	paymenthnd "github.com/nathakusuma/elevateu-backend/internal/app/payment/handler"
 	paymentrepo "github.com/nathakusuma/elevateu-backend/internal/app/payment/repository"
 	paymentsvc "github.com/nathakusuma/elevateu-backend/internal/app/payment/service"
-	storagerepo "github.com/nathakusuma/elevateu-backend/internal/app/storage/repository"
 	userhnd "github.com/nathakusuma/elevateu-backend/internal/app/user/handler"
 	userrepo "github.com/nathakusuma/elevateu-backend/internal/app/user/repository"
 	usersvc "github.com/nathakusuma/elevateu-backend/internal/app/user/service"
@@ -86,7 +85,7 @@ func (s *httpServer) MountMiddlewares() {
 func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	gcpClient := gcp.NewStorageClient()
 	bcryptInstance := bcrypt.GetBcrypt()
-	fileUtil := fileutil.NewFileUtil()
+	fileUtil := fileutil.NewFileUtil(gcpClient)
 	jwtAccess := jwt.NewJwt(env.GetEnv().JwtAccessExpireDuration, env.GetEnv().JwtAccessSecretKey)
 	mailer := mail.NewMailDialer()
 	randomGenerator := randgen.GetRandGen()
@@ -101,11 +100,10 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	api := s.app.Group("/api")
 	v1 := api.Group("/v1")
 
-	storageRepository := storagerepo.NewStorageRepository(gcpClient)
 	userRepository := userrepo.NewUserRepository(db)
 	authRepository := authrepo.NewAuthRepository(db, rds)
 
-	userService := usersvc.NewUserService(userRepository, storageRepository, bcryptInstance, fileUtil, uuidInstance)
+	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, jwtAccess, mailer,
 		randomGenerator, uuidInstance)
 
