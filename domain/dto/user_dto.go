@@ -136,10 +136,10 @@ type UpdateMentorRequest struct {
 }
 
 type CreateUserRequest struct {
-	Name     string                `json:"name" validate:"required,min=3,max=60"`
-	Email    string                `json:"email" validate:"required,email,max=320"`
-	Password string                `json:"-" validate:"required,min=8,max=72"`
-	Role     enum.UserRole         `json:"role" validate:"required,oneof=admin mentor student"`
+	Name     string                `json:"name"`
+	Email    string                `json:"email"`
+	Password string                `json:"-"`
+	Role     enum.UserRole         `json:"role"`
 	Student  *CreateStudentRequest `json:"student,omitempty"`
 	Mentor   *CreateMentorRequest  `json:"mentor,omitempty"`
 }

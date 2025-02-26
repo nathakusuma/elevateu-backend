@@ -179,13 +179,23 @@ func (s *authService) Register(ctx context.Context,
 		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
-	// save user
-	_, err = s.userSvc.CreateUser(ctx, &dto.CreateUserRequest{
+	// Prepare user creation request
+	createUserReq := &dto.CreateUserRequest{
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
-		Role:     enum.UserRoleStudent,
-	})
+		Role:     req.Role,
+	}
+
+	// Add role-specific data
+	if req.Role == enum.UserRoleStudent && req.Student != nil {
+		createUserReq.Student = req.Student
+	} else if req.Role == enum.UserRoleMentor && req.Mentor != nil {
+		createUserReq.Mentor = req.Mentor
+	}
+
+	// save user
+	_, err = s.userSvc.CreateUser(ctx, createUserReq)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
@@ -197,6 +207,7 @@ func (s *authService) Register(ctx context.Context,
 
 	log.Info(map[string]interface{}{
 		"user.email": req.Email,
+		"user.role":  req.Role,
 	}, "[AuthService][Register] user registered")
 
 	// login
