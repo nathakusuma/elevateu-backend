@@ -1,0 +1,43 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Build Image
+        run: docker build -t nathakusuma/elevateu-backend:latest .
+
+      - name: Push Image
+        run: |
+          docker login -u nathakusuma -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push nathakusuma/elevateu-backend:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          script: |
+            cd elevateu-backend
+            git pull
+            docker pull nathakusuma/elevateu-backend:latest
+            docker compose down
+            docker compose up -d
+            make migrate-up
