@@ -12,6 +12,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
+	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/pkg/bcrypt"
 	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
@@ -78,6 +79,26 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 		Role:         req.Role,
 	}
 
+	// Add role-specific data
+	if req.Role == enum.UserRoleStudent {
+		if req.Student == nil {
+			return uuid.Nil, errorpkg.ErrValidation.WithDetail("Student data is required")
+		}
+		user.Student = &entity.Student{
+			Instance: req.Student.Instance,
+			Major:    req.Student.Major,
+		}
+	} else if req.Role == enum.UserRoleMentor {
+		if req.Mentor == nil {
+			return uuid.Nil, errorpkg.ErrValidation.WithDetail("Mentor data is required")
+		}
+		user.Mentor = &entity.Mentor{
+			Specialization: req.Mentor.Specialization,
+			Experience:     req.Mentor.Experience,
+			Price:          req.Mentor.Price,
+		}
+	}
+
 	err = s.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		// if email already exists
@@ -102,7 +123,7 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 	return userID, nil
 }
 
-func (s *userService) getUserByField(ctx context.Context, field, value string) (*entity.User, error) {
+func (s *userService) getUserByField(ctx context.Context, field string, value interface{}) (*entity.User, error) {
 	// get from repository
 	user, err := s.userRepo.GetUserByField(ctx, field, value)
 	if err != nil {
@@ -141,7 +162,7 @@ func (s *userService) GetUserByEmail(ctx context.Context, email string) (*entity
 }
 
 func (s *userService) GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
-	return s.getUserByField(ctx, "id", id.String())
+	return s.getUserByField(ctx, "id", id)
 }
 
 func (s *userService) UpdatePassword(ctx context.Context, email, newPassword string) error {
@@ -158,20 +179,19 @@ func (s *userService) UpdatePassword(ctx context.Context, email, newPassword str
 			"error":      err,
 			"user.email": email,
 		}, "[UserService][UpdatePassword] Failed to hash password")
-
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
-	// update user password
-	user.PasswordHash = newPasswordHash
+	userUpdates := &dto.UserUpdate{
+		ID:           user.ID,
+		PasswordHash: &newPasswordHash,
+	}
 
-	err = s.userRepo.UpdateUser(ctx, user)
-	if err != nil {
+	if err = s.userRepo.UpdateUser(ctx, userUpdates); err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":      err,
 			"user.email": email,
 		}, "[UserService][UpdatePassword] Failed to update user password")
-
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
@@ -183,19 +203,24 @@ func (s *userService) UpdatePassword(ctx context.Context, email, newPassword str
 }
 
 func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, req dto.UpdateUserRequest) error {
-	// get user by ID
-	user, err := s.GetUserByID(ctx, id)
-	if err != nil {
-		return err
+	userUpdate := &dto.UserUpdate{
+		ID:   id,
+		Name: req.Name,
 	}
 
-	// update user data
-	if req.Name != nil {
-		user.Name = *req.Name
+	if req.Student != nil {
+		userUpdate.Student = &dto.StudentUpdate{
+			Instance: req.Student.Instance,
+			Major:    req.Student.Major,
+		}
 	}
 
-	if req.Bio != nil {
-		user.Bio = req.Bio
+	if req.Mentor != nil {
+		userUpdate.Mentor = &dto.MentorUpdate{
+			Specialization: req.Mentor.Specialization,
+			Experience:     req.Mentor.Experience,
+			Price:          req.Mentor.Price,
+		}
 	}
 
 	if req.Avatar != nil {
@@ -203,21 +228,20 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upda
 		if err2 != nil {
 			return err2
 		}
-		user.AvatarURL = avatarURL
+		userUpdate.AvatarURL = avatarURL
 	}
 
 	// update user
-	err = s.userRepo.UpdateUser(ctx, user)
-	if err != nil {
+	if err := s.userRepo.UpdateUser(ctx, userUpdate); err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error": err,
-			"user":  user,
+			"error":   err,
+			"updates": userUpdate,
 		}, "[UserService][UpdateUser] Failed to update user")
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
-		"user": user,
+		"updates": userUpdate,
 	}, "[UserService][UpdateUser] User updated")
 
 	return nil

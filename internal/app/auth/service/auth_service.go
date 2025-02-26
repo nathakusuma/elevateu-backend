@@ -184,7 +184,7 @@ func (s *authService) Register(ctx context.Context,
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
-		Role:     enum.RoleStudent,
+		Role:     enum.UserRoleStudent,
 	})
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{

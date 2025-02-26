@@ -11,8 +11,8 @@ import (
 
 type IUserRepository interface {
 	CreateUser(ctx context.Context, user *entity.User) error
-	GetUserByField(ctx context.Context, field, value string) (*entity.User, error)
-	UpdateUser(ctx context.Context, user *entity.User) error
+	GetUserByField(ctx context.Context, field string, value interface{}) (*entity.User, error)
+	UpdateUser(ctx context.Context, req *dto.UserUpdate) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 }
 

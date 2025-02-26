@@ -14,9 +14,25 @@ type User struct {
 	Email        string        `db:"email"`
 	PasswordHash string        `db:"password_hash"`
 	Role         enum.UserRole `db:"role"`
-	Bio          *string       `db:"bio"`
 	AvatarURL    *string       `db:"avatar_url"`
 	CreatedAt    time.Time     `db:"created_at"`
 	UpdatedAt    time.Time     `db:"updated_at"`
-	DeletedAt    *time.Time    `db:"deleted_at"`
+
+	Student *Student `db:"student"`
+	Mentor  *Mentor  `db:"mentor"`
+}
+
+type Student struct {
+	Instance string `db:"instance"`
+	Major    string `db:"major"`
+}
+
+type Mentor struct {
+	Specialization string  `db:"specialization"`
+	Experience     string  `db:"experience"`
+	Rating         float64 `db:"rating"`
+	RatingCount    int     `db:"rating_count"`
+	RatingTotal    float64 `db:"rating_total"`
+	Price          int     `db:"price"`
+	Balance        int     `db:"balance"`
 }

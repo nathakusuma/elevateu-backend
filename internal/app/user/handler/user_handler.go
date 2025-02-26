@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"errors"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -82,18 +80,17 @@ func (c *userHandler) getUser(param string) fiber.Handler {
 
 func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 	var req dto.UpdateUserRequest
+
+	// Parse avatar file
+	if form, err := ctx.MultipartForm(); err == nil {
+		if filesHeader := form.File["avatar"]; len(filesHeader) > 0 {
+			req.Avatar = filesHeader[0]
+		}
+	}
+
+	// Parse user basic data
 	if err := ctx.BodyParser(&req); err != nil {
 		return errorpkg.ErrFailParseRequest
-	}
-
-	avatar, err := ctx.FormFile("avatar")
-	if err != nil && !errors.Is(err, fiber.ErrNotFound) {
-		return errorpkg.ErrFailParseRequest
-	}
-	req.Avatar = avatar
-
-	if err2 := c.val.ValidateStruct(req); err2 != nil {
-		return err2
 	}
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
@@ -101,8 +98,25 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 		return errorpkg.ErrInvalidBearerToken
 	}
 
-	if err2 := c.svc.UpdateUser(ctx.Context(), userID, req); err2 != nil {
-		return err2
+	// Validate role-specific data
+	if req.Student != nil {
+		if err := c.val.ValidateStruct(req.Student); err != nil {
+			return err
+		}
+	}
+	if req.Mentor != nil {
+		if err := c.val.ValidateStruct(req.Mentor); err != nil {
+			return err
+		}
+	}
+
+	// Validate the main request
+	if err := c.val.ValidateStruct(req); err != nil {
+		return err
+	}
+
+	if err := c.svc.UpdateUser(ctx.Context(), userID, req); err != nil {
+		return err
 	}
 
 	return ctx.SendStatus(fiber.StatusNoContent)

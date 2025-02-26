@@ -324,7 +324,7 @@ func Test_AuthService_Login(t *testing.T) {
 			ID:           uuid.New(),
 			Email:        req.Email,
 			PasswordHash: passwordHash,
-			Role:         enum.RoleStudent,
+			Role:         enum.UserRoleStudent,
 		}
 
 		// Setup expectations
@@ -366,7 +366,7 @@ func Test_AuthService_Login(t *testing.T) {
 			ID:           uuid.New(),
 			Email:        req.Email,
 			PasswordHash: passwordHash,
-			Role:         enum.RoleStudent,
+			Role:         enum.UserRoleStudent,
 		}
 
 		// Setup expectations
@@ -402,7 +402,7 @@ func Test_AuthService_Login(t *testing.T) {
 			ID:           uuid.New(),
 			Email:        req.Email,
 			PasswordHash: passwordHash,
-			Role:         enum.RoleStudent,
+			Role:         enum.UserRoleStudent,
 		}
 
 		// Setup expectations
@@ -467,7 +467,7 @@ func Test_AuthService_Register(t *testing.T) {
 				Name:     req.Name,
 				Email:    req.Email,
 				Password: req.Password,
-				Role:     enum.RoleStudent,
+				Role:     enum.UserRoleStudent,
 			}).Return(userID, nil)
 
 		// Mock login expectations
@@ -563,7 +563,7 @@ func mockLoginExpectations(ctx context.Context, mocks *authServiceMocks, email, 
 		ID:           userID,
 		Email:        email,
 		PasswordHash: passwordHash,
-		Role:         enum.RoleStudent,
+		Role:         enum.UserRoleStudent,
 		Name:         "Test User",
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
@@ -605,7 +605,7 @@ func Test_AuthService_Refresh(t *testing.T) {
 		ID:        userID,
 		Name:      "Test User",
 		Email:     "test@example.com",
-		Role:      enum.RoleStudent,
+		Role:      enum.UserRoleStudent,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -627,7 +627,7 @@ func Test_AuthService_Refresh(t *testing.T) {
 
 		// Expect token generation
 		mocks.jwt.EXPECT().
-			Create(userID, enum.RoleStudent).
+			Create(userID, enum.UserRoleStudent).
 			Return(newAccessToken, nil)
 
 		// Expect random string generation for refresh token
@@ -716,7 +716,7 @@ func Test_AuthService_Refresh(t *testing.T) {
 
 		// Expect error in token generation
 		mocks.jwt.EXPECT().
-			Create(userID, enum.RoleStudent).
+			Create(userID, enum.UserRoleStudent).
 			Return("", errors.New("token generation failed"))
 
 		// Call the service
@@ -738,7 +738,7 @@ func Test_AuthService_Refresh(t *testing.T) {
 
 		// Expect successful access token generation
 		mocks.jwt.EXPECT().
-			Create(userID, enum.RoleStudent).
+			Create(userID, enum.UserRoleStudent).
 			Return(newAccessToken, nil)
 
 		// Expect error in refresh token generation
@@ -765,7 +765,7 @@ func Test_AuthService_Refresh(t *testing.T) {
 
 		// Expect successful access token generation
 		mocks.jwt.EXPECT().
-			Create(userID, enum.RoleStudent).
+			Create(userID, enum.UserRoleStudent).
 			Return(newAccessToken, nil)
 
 		// Expect successful refresh token generation

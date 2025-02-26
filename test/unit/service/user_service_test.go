@@ -61,7 +61,7 @@ func Test_UserService_CreateUser(t *testing.T) {
 			Name:     "Test User",
 			Email:    "test@example.com",
 			Password: hashedPassword,
-			Role:     enum.RoleStudent,
+			Role:     enum.UserRoleStudent,
 		}
 
 		// Expect UUID generation
@@ -217,7 +217,7 @@ func Test_UserService_GetUserByEmail(t *testing.T) {
 			ID:        uuid.New(),
 			Name:      "Test User",
 			Email:     email,
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -241,7 +241,7 @@ func Test_UserService_GetUserByEmail(t *testing.T) {
 			ID:        uuid.New(),
 			Name:      "Test User",
 			Email:     email,
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			AvatarURL: &avatarURL,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
@@ -294,7 +294,7 @@ func Test_UserService_GetUserByEmail(t *testing.T) {
 			ID:        uuid.New(),
 			Name:      "Test User",
 			Email:     email,
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			AvatarURL: &avatarURL,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
@@ -326,7 +326,7 @@ func Test_UserService_GetUserByID(t *testing.T) {
 			ID:        id,
 			Name:      "Test User",
 			Email:     "test@example.com",
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -350,7 +350,7 @@ func Test_UserService_GetUserByID(t *testing.T) {
 			ID:        id,
 			Name:      "Test User",
 			Email:     "test@example.com",
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			AvatarURL: &avatarURL,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
@@ -403,7 +403,7 @@ func Test_UserService_GetUserByID(t *testing.T) {
 			ID:        id,
 			Name:      "Test User",
 			Email:     "test@example.com",
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			AvatarURL: &avatarURL,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
@@ -439,7 +439,7 @@ func Test_UserService_UpdatePassword(t *testing.T) {
 			Name:         "Test User",
 			Email:        email,
 			PasswordHash: oldPasswordHash,
-			Role:         enum.RoleStudent,
+			Role:         enum.UserRoleStudent,
 		}
 
 		// Expect to get user by email
@@ -484,7 +484,7 @@ func Test_UserService_UpdatePassword(t *testing.T) {
 			Name:         "Test User",
 			Email:        email,
 			PasswordHash: oldPasswordHash,
-			Role:         enum.RoleStudent,
+			Role:         enum.UserRoleStudent,
 		}
 
 		// Expect to get user by email
@@ -510,7 +510,7 @@ func Test_UserService_UpdatePassword(t *testing.T) {
 			Name:         "Test User",
 			Email:        email,
 			PasswordHash: oldPasswordHash,
-			Role:         enum.RoleStudent,
+			Role:         enum.UserRoleStudent,
 		}
 
 		// Expect to get user by email
@@ -549,7 +549,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			Name:      "Original Name",
 			Email:     "test@example.com",
 			Bio:       nil,
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -584,7 +584,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			Name:      "Original Name",
 			Email:     "test@example.com",
 			Bio:       nil,
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -652,7 +652,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			Name:      "Original Name",
 			Email:     "test@example.com",
 			Bio:       nil,
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -687,7 +687,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			Name:      "Original Name",
 			Email:     "test@example.com",
 			Bio:       nil,
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -748,7 +748,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			ID:        userID,
 			Name:      "Original Name",
 			Email:     "test@example.com",
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -791,7 +791,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			ID:        userID,
 			Name:      "Original Name",
 			Email:     "test@example.com",
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -837,7 +837,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			ID:        userID,
 			Name:      "Original Name",
 			Email:     "test@example.com",
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -888,7 +888,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			ID:        userID,
 			Name:      "Original Name",
 			Email:     "test@example.com",
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
@@ -918,7 +918,7 @@ func Test_UserService_UpdateUser(t *testing.T) {
 			ID:        userID,
 			Name:      "Original Name",
 			Email:     "test@example.com",
-			Role:      enum.RoleStudent,
+			Role:      enum.UserRoleStudent,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}
