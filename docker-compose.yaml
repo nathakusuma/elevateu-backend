@@ -22,13 +22,11 @@ services:
     restart: always
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: nathakusuma/elevateu-backend:latest
     env_file:
       - .env
     environment:
-      - PORT=8080
+      - APP_PORT=8080
     depends_on:
       db:
         condition: service_healthy
