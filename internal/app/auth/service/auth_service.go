@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -102,8 +101,7 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 			"[ElevateU] Verify Your Account",
 			"otp_register.html",
 			map[string]interface{}{
-				"otp":  otp,
-				"href": env.GetEnv().FrontendURL + "/verify-email?email=" + url.QueryEscape(email) + "&otp=" + otp,
+				"otp": otp,
 			})
 		if err != nil {
 			log.Error(map[string]interface{}{
