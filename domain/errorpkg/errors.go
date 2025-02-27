@@ -64,3 +64,10 @@ var (
 		"email-already-registered",
 		"Email already registered. Please login or use another email.")
 )
+
+// Category
+var (
+	ErrCategoryNameExists = NewError(http.StatusConflict,
+		"category-name-exists",
+		"Category name already exists. Please use another name.")
+)

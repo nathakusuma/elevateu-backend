@@ -13,6 +13,9 @@ import (
 	authhnd "github.com/nathakusuma/elevateu-backend/internal/app/auth/handler"
 	authrepo "github.com/nathakusuma/elevateu-backend/internal/app/auth/repository"
 	authsvc "github.com/nathakusuma/elevateu-backend/internal/app/auth/service"
+	categoryhnd "github.com/nathakusuma/elevateu-backend/internal/app/category/handler"
+	categoryrepo "github.com/nathakusuma/elevateu-backend/internal/app/category/repository"
+	categorysvc "github.com/nathakusuma/elevateu-backend/internal/app/category/service"
 	paymenthnd "github.com/nathakusuma/elevateu-backend/internal/app/payment/handler"
 	paymentrepo "github.com/nathakusuma/elevateu-backend/internal/app/payment/repository"
 	paymentsvc "github.com/nathakusuma/elevateu-backend/internal/app/payment/service"
@@ -102,16 +105,18 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 
 	userRepository := userrepo.NewUserRepository(db)
 	authRepository := authrepo.NewAuthRepository(db, rds)
+	paymentRepository := paymentrepo.NewPaymentRepository(db, rds)
+	categoryRepository := categoryrepo.NewCategoryRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, jwtAccess, mailer,
 		randomGenerator, uuidInstance)
-
-	paymentRepository := paymentrepo.NewPaymentRepository(db, rds)
 	midtransService := paymentsvc.NewMidtransService()
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)
+	categoryService := categorysvc.NewCategoryService(categoryRepository, uuidInstance)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
 	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
 	paymenthnd.InitPaymentHandler(v1, paymentService, midtransService)
+	categoryhnd.InitCategoryHandler(v1, categoryService, middlewareInstance, validatorInstance)
 }
