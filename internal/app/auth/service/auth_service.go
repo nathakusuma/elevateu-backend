@@ -117,28 +117,6 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 	return nil
 }
 
-func (s *authService) CheckRegisterOTP(ctx context.Context, email, otp string) error {
-	savedOtp, err := s.repo.GetRegisterOTP(ctx, email)
-	if err != nil {
-		if strings.HasPrefix(err.Error(), "otp not found") {
-			return errorpkg.ErrInvalidOTP
-		}
-
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":      err,
-			"user.email": email,
-		}, "[AuthService][CheckRegisterOTP] failed to get otp")
-
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
-	}
-
-	if savedOtp != otp {
-		return errorpkg.ErrInvalidOTP
-	}
-
-	return nil
-}
-
 func (s *authService) Register(ctx context.Context,
 	req dto.RegisterRequest,
 ) (dto.LoginResponse, error) {

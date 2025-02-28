@@ -25,7 +25,6 @@ type IAuthRepository interface {
 
 type IAuthService interface {
 	RequestRegisterOTP(ctx context.Context, email string) error
-	CheckRegisterOTP(ctx context.Context, email, otp string) error
 	Register(ctx context.Context, req dto.RegisterRequest) (dto.LoginResponse, error)
 	Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error)
 

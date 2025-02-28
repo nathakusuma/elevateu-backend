@@ -32,7 +32,6 @@ func InitAuthHandler(
 
 	authGroup := router.Group("/auth")
 	authGroup.Post("/register/otp", handler.requestOTPRegister)
-	authGroup.Post("/register/otp/check", handler.checkOTPRegister)
 	authGroup.Post("/register", handler.register)
 	authGroup.Post("/login", handler.login)
 	authGroup.Post("/refresh", handler.refreshToken)
@@ -56,29 +55,6 @@ func (c *authHandler) requestOTPRegister(ctx *fiber.Ctx) error {
 	}
 
 	err := c.svc.RequestRegisterOTP(ctx.Context(), req.Email)
-	if err != nil {
-		return err
-	}
-
-	return ctx.SendStatus(http.StatusNoContent)
-}
-
-func (c *authHandler) checkOTPRegister(ctx *fiber.Ctx) error {
-	type request struct {
-		Email string `json:"email" validate:"required,email"`
-		OTP   string `json:"otp"   validate:"required"`
-	}
-
-	var req request
-	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
-	}
-
-	if err := c.val.ValidateStruct(req); err != nil {
-		return err
-	}
-
-	err := c.svc.CheckRegisterOTP(ctx.Context(), req.Email, req.OTP)
 	if err != nil {
 		return err
 	}

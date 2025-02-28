@@ -314,38 +314,6 @@ paths:
         '500':
           $ref: '#/components/responses/ErrInternalServer'
 
-  /auth/register/otp/check:
-    get:
-      tags:
-        - Auth
-      summary: Check Register OTP
-      operationId: checkRegisterOTP
-      parameters:
-        - name: email
-          in: query
-          required: true
-          schema:
-            type: string
-            format: email
-        - name: otp
-          in: query
-          required: true
-          schema:
-            type: string
-            examples:
-              - "123456"
-      responses:
-        '204':
-          description: Success - OTP verification successful
-        '400':
-          $ref: '#/components/responses/ErrFailParseRequest'
-        '401':
-          $ref: '#/components/responses/ErrInvalidOTP'
-        '422':
-          $ref: '#/components/responses/ErrValidation'
-        '500':
-          $ref: '#/components/responses/ErrInternalServer'
-
   /auth/register:
     post:
       tags:
