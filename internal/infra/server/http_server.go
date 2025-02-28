@@ -4,10 +4,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
-
-	"github.com/nathakusuma/elevateu-backend/internal/infra/gcp"
-	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
-
 	"github.com/redis/go-redis/v9"
 
 	authhnd "github.com/nathakusuma/elevateu-backend/internal/app/auth/handler"
@@ -16,6 +12,9 @@ import (
 	categoryhnd "github.com/nathakusuma/elevateu-backend/internal/app/category/handler"
 	categoryrepo "github.com/nathakusuma/elevateu-backend/internal/app/category/repository"
 	categorysvc "github.com/nathakusuma/elevateu-backend/internal/app/category/service"
+	coursehnd "github.com/nathakusuma/elevateu-backend/internal/app/course/handler"
+	courserepo "github.com/nathakusuma/elevateu-backend/internal/app/course/repository"
+	coursesvc "github.com/nathakusuma/elevateu-backend/internal/app/course/service"
 	paymenthnd "github.com/nathakusuma/elevateu-backend/internal/app/payment/handler"
 	paymentrepo "github.com/nathakusuma/elevateu-backend/internal/app/payment/repository"
 	paymentsvc "github.com/nathakusuma/elevateu-backend/internal/app/payment/service"
@@ -23,8 +22,10 @@ import (
 	userrepo "github.com/nathakusuma/elevateu-backend/internal/app/user/repository"
 	usersvc "github.com/nathakusuma/elevateu-backend/internal/app/user/service"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/gcp"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
 	"github.com/nathakusuma/elevateu-backend/pkg/bcrypt"
+	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 	"github.com/nathakusuma/elevateu-backend/pkg/jwt"
 	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"github.com/nathakusuma/elevateu-backend/pkg/mail"
@@ -107,6 +108,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	authRepository := authrepo.NewAuthRepository(db, rds)
 	paymentRepository := paymentrepo.NewPaymentRepository(db, rds)
 	categoryRepository := categoryrepo.NewCategoryRepository(db)
+	courseRepository := courserepo.NewCourseRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, jwtAccess, mailer,
@@ -114,9 +116,11 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	midtransService := paymentsvc.NewMidtransService()
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)
 	categoryService := categorysvc.NewCategoryService(categoryRepository, uuidInstance)
+	courseService := coursesvc.NewCourseService(courseRepository, fileUtil, uuidInstance)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
 	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
 	paymenthnd.InitPaymentHandler(v1, paymentService, midtransService)
 	categoryhnd.InitCategoryHandler(v1, categoryService, middlewareInstance, validatorInstance)
+	coursehnd.InitCourseHandler(v1, middlewareInstance, validatorInstance, courseService)
 }

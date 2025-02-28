@@ -36,6 +36,11 @@ func (u *fileUtil) Upload(ctx context.Context, file io.Reader, path string) (str
 	return url, nil
 }
 
+func (u *fileUtil) GetFullURL(path string) string {
+	bucket := env.GetEnv().GCPStorageBucketName
+	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucket, path)
+}
+
 func (u *fileUtil) GetSignedURL(originalURL string) (string, error) {
 	bucket := env.GetEnv().GCPStorageBucketName
 	expectedPrefix := "https://storage.googleapis.com/" + bucket + "/"
