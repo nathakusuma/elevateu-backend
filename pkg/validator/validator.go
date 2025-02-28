@@ -3,6 +3,7 @@ package validator
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"sync"
 
 	enlocales "github.com/go-playground/locales/en"
@@ -41,6 +42,21 @@ func NewValidator() IValidator {
 		}
 
 		val := validator.New()
+
+		val.RegisterTagNameFunc(func(fld reflect.StructField) string {
+			for _, tagName := range []string{"json", "form", "query", "param"} {
+				if tag := fld.Tag.Get(tagName); tag != "" {
+					name := strings.SplitN(tag, ",", 2)[0]
+					if name == "-" {
+						continue
+					}
+					return name
+				}
+			}
+			// Fall back to field name if no tags are found
+			return fld.Name
+		})
+
 		err := entranslations.RegisterDefaultTranslations(val, trans)
 		if err != nil {
 			log.Error(map[string]interface{}{
@@ -77,15 +93,14 @@ func (v *validatorStruct) handleValidationErrors(err error, data interface{}) er
 		length := len(valErrs)
 		resp := make(ValidationErrors, length)
 		for i, err := range valErrs {
-			jsonTag := ""
-			if data != nil {
-				dataType := reflect.TypeOf(data)
-				if dataType.Kind() == reflect.Ptr {
-					dataType = dataType.Elem()
-				}
-				field, _ := dataType.FieldByName(err.StructField())
-				jsonTag = getJSONFieldName(field)
+			fieldPath := err.Namespace()
+
+			parts := strings.Split(fieldPath, ".")
+			if len(parts) > 1 {
+				parts = parts[1:]
 			}
+
+			jsonTag := strings.ToLower(strings.Join(parts, "."))
 
 			resp[i] = map[string]validationError{
 				jsonTag: {
@@ -102,16 +117,4 @@ func (v *validatorStruct) handleValidationErrors(err error, data interface{}) er
 		"error": err.Error(),
 	}, "[VALIDATOR][handleValidationErrors] Unexpected error")
 	return err
-}
-
-func getJSONFieldName(field reflect.StructField) string {
-	checkTags := []string{"json", "query", "param"}
-	for _, tag := range checkTags {
-		jsonTag := field.Tag.Get(tag)
-		if jsonTag != "" {
-			return jsonTag
-		}
-	}
-
-	return field.Name
 }
