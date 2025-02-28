@@ -19,7 +19,44 @@ components:
   schemas:
     UserRole:
       type: string
-      enum: [ user, mentor, admin ]
+      enum: [ student, mentor, admin ]
+
+    StudentData:
+      type: object
+      properties:
+        instance:
+          type: string
+          examples:
+            - "Universitas Indonesia"
+        major:
+          type: string
+          examples:
+            - "Computer Science"
+
+    MentorData:
+      type: object
+      properties:
+        specialization:
+          type: string
+          examples:
+            - "Backend Development"
+        experience:
+          type: string
+          examples:
+            - "5 years working as backend developer at Gojek"
+        rating:
+          type: number
+          format: float
+          examples:
+            - 4.8
+        rating_count:
+          type: integer
+          examples:
+            - 25
+        price:
+          type: integer
+          examples:
+            - 250000
 
     User:
       type: object
@@ -35,11 +72,10 @@ components:
           type: [ "string", "null" ]
           format: email
         role:
-          oneOf:
-            - $ref: '#/components/schemas/UserRole'
-            - type: "null"
+          type: string
+          enum: [ student, mentor, admin ]
           examples:
-            - "user"
+            - "student"
         bio:
           type: [ "string", "null" ]
           examples:
@@ -55,6 +91,41 @@ components:
         updated_at:
           type: [ "string", "null" ]
           format: date-time
+        student:
+          type: object
+          properties:
+            instance:
+              type: string
+              examples:
+                - "Universitas Indonesia"
+            major:
+              type: string
+              examples:
+                - "Computer Science"
+        mentor:
+          type: object
+          properties:
+            specialization:
+              type: string
+              examples:
+                - "Backend Development"
+            experience:
+              type: string
+              examples:
+                - "5 years working as backend developer at Gojek"
+            rating:
+              type: number
+              format: float
+              examples:
+                - 4.8
+            rating_count:
+              type: integer
+              examples:
+                - 25
+            price:
+              type: integer
+              examples:
+                - 250000
 
     UserMinimal:
       type: object
@@ -67,20 +138,50 @@ components:
           examples:
             - "Natha Kusuma"
         role:
-          oneOf:
-            - $ref: '#/components/schemas/UserRole'
-            - type: "null"
+          type: string
+          enum: [ student, mentor, admin ]
           examples:
-            - "user"
-        bio:
-          type: [ "string", "null" ]
-          examples:
-            - "Seorang programmer pemula yang sedang belajar backend"
+            - "student"
         avatar_url:
           type: [ "string", "null" ]
           format: uri
           examples:
             - "https://elevateu.nathakusuma.com/assets/avatar.jpg"
+        student:
+          type: object
+          properties:
+            instance:
+              type: string
+              examples:
+                - "Universitas Indonesia"
+            major:
+              type: string
+              examples:
+                - "Computer Science"
+        mentor:
+          type: object
+          properties:
+            specialization:
+              type: string
+              examples:
+                - "Backend Development"
+            experience:
+              type: string
+              examples:
+                - "5 years working as backend developer at Gojek"
+            rating:
+              type: number
+              format: float
+              examples:
+                - 4.8
+            rating_count:
+              type: integer
+              examples:
+                - 25
+            price:
+              type: integer
+              examples:
+                - 250000
 
     ProblemDetails:
       type: object
@@ -185,6 +286,32 @@ components:
                   tag: "required"
                   param: ""
                   translation: "Email is a required field"
+
+    ErrFileTooLarge:
+      description: File size too large
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/file-too-large"
+            title: "File size is too large. Please upload smaller file."
+            status: 413
+            detail: "File size is too large (2.5MB). Please upload a file less than 2MB"
+            instance: "https://elevateu.nathakusuma.com/api/v1/users/me"
+
+    ErrInvalidFileFormat:
+      description: Invalid file format
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/invalid-file-format"
+            title: "Invalid file format. Please upload a valid file."
+            status: 422
+            detail: "File type application/octet-stream is not allowed. Please upload a valid image file"
+            instance: "https://elevateu.nathakusuma.com/api/v1/users/me"
 
     ## Auth
     ErrCredentialsNotMatch:
@@ -331,6 +458,7 @@ paths:
                 - otp
                 - name
                 - password
+                - role
               properties:
                 email:
                   type: string
@@ -343,7 +471,7 @@ paths:
                 name:
                   type: string
                   minLength: 3
-                  maxLength: 100
+                  maxLength: 60
                   pattern: "^[\x00-\x7F]*$"  # ASCII characters only
                   examples:
                     - "Natha Kusuma"
@@ -352,6 +480,53 @@ paths:
                   minLength: 8
                   maxLength: 72
                   pattern: "^[\x00-\x7F]*$"  # ASCII characters only
+                role:
+                  type: string
+                  enum: [ student, mentor ]
+                  examples:
+                    - "student"
+                student:
+                  type: object
+                  required:
+                    - instance
+                    - major
+                  properties:
+                    instance:
+                      type: string
+                      minLength: 1
+                      maxLength: 50
+                      examples:
+                        - "Universitas Indonesia"
+                    major:
+                      type: string
+                      minLength: 1
+                      maxLength: 50
+                      examples:
+                        - "Computer Science"
+                mentor:
+                  type: object
+                  required:
+                    - specialization
+                    - experience
+                    - price
+                  properties:
+                    specialization:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      examples:
+                        - "Backend Development"
+                    experience:
+                      type: string
+                      minLength: 1
+                      maxLength: 1000
+                      examples:
+                        - "5 years working as backend developer at Gojek"
+                    price:
+                      type: integer
+                      minimum: 0
+                      examples:
+                        - 250000
       responses:
         '201':
           $ref: '#/components/responses/LoginResponse'
@@ -544,29 +719,63 @@ paths:
       tags:
         - Users
       summary: Update User Profile
-      description: Update the current user's profile. This method allows partial updates.
+      description: Update the current user's profile. This method allows partial updates and supports multipart/form-data for avatar uploads.
       operationId: updateUserMe
       security:
         - bearerAuth: [ ]
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
                 name:
-                  type: [ string, "null" ]
+                  type: string
                   minLength: 3
-                  maxLength: 100
+                  maxLength: 60
                   pattern: "^[\x00-\x7F]*$"  # ASCII characters only
                   examples:
                     - "Natha Kusuma :)"
-                bio:
-                  type: [ string, "null" ]
-                  maxLength: 500
-                  examples:
-                    - "Seorang programmer pemula yang sedang belajar backend"
+                avatar:
+                  type: string
+                  format: binary
+                  description: User avatar image (max 2MB, image formats only)
+                student:
+                  type: object
+                  properties:
+                    instance:
+                      type: string
+                      minLength: 1
+                      maxLength: 50
+                      examples:
+                        - "Universitas Indonesia"
+                    major:
+                      type: string
+                      minLength: 1
+                      maxLength: 50
+                      examples:
+                        - "Computer Science"
+                mentor:
+                  type: object
+                  properties:
+                    specialization:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      examples:
+                        - "Backend Development"
+                    experience:
+                      type: string
+                      minLength: 1
+                      maxLength: 1000
+                      examples:
+                        - "5 years working as backend developer at Gojek"
+                    price:
+                      type: integer
+                      minimum: 0
+                      examples:
+                        - 250000
       responses:
         '204':
           description: Success - User profile updated successfully
@@ -574,6 +783,8 @@ paths:
           $ref: '#/components/responses/ErrFailParseRequest'
         '401':
           $ref: '#/components/responses/BearerTokenErrors'
+        '413':
+          $ref: '#/components/responses/ErrFileTooLarge'
         '422':
           $ref: '#/components/responses/ErrValidation'
         '500':
