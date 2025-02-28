@@ -72,10 +72,7 @@ components:
           type: [ "string", "null" ]
           format: email
         role:
-          type: string
-          enum: [ student, mentor, admin ]
-          examples:
-            - "student"
+          $ref: '#/components/schemas/UserRole'
         bio:
           type: [ "string", "null" ]
           examples:
@@ -138,10 +135,7 @@ components:
           examples:
             - "Natha Kusuma"
         role:
-          type: string
-          enum: [ student, mentor, admin ]
-          examples:
-            - "student"
+          $ref: '#/components/schemas/UserRole'
         avatar_url:
           type: [ "string", "null" ]
           format: uri
@@ -182,6 +176,19 @@ components:
               type: integer
               examples:
                 - 250000
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: [ "string", "null" ]
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        name:
+          type: string
+          examples:
+            - "Programming"
 
     ProblemDetails:
       type: object
@@ -381,6 +388,18 @@ components:
             status: 409
             instance: "https://elevateu.nathakusuma.com/api/v1/auth/register"
 
+    ErrCategoryNameExists:
+      description: Category name already exists
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/category-name-exists"
+            title: "Category name already exists. Please use another name."
+            status: 409
+            instance: "https://elevateu.nathakusuma.com/api/v1/categories"
+
     LoginResponse:
       description: Login response
       content:
@@ -408,6 +427,8 @@ tags:
     description: Authentication and authorization operations
   - name: Users
     description: User management operations
+  - name: Categories
+    description: Course & Challenge Category
 
 paths:
   /auth/register/otp:
@@ -845,6 +866,165 @@ paths:
       responses:
         '204':
           description: Success - User deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /categories:
+    post:
+      tags:
+        - Categories
+      summary: Create New Category
+      description: Create a new category. Only available to users with admin role.
+      operationId: createCategory
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Programming"
+      responses:
+        '201':
+          description: Success - Category created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - category
+                properties:
+                  category:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        examples:
+                          - "01949e48-9f6b-796b-9611-3c9025493233"
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '409':
+          $ref: '#/components/responses/ErrCategoryNameExists'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    get:
+      tags:
+        - Categories
+      summary: Get All Categories
+      operationId: getAllCategories
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - categories
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /categories/{id}:
+    put:
+      tags:
+        - Categories
+      summary: Update Category
+      description: Update a category by ID. Only available to users with admin role.
+      operationId: updateCategory
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Web Development"
+      responses:
+        '204':
+          description: Success - Category updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ErrCategoryNameExists'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Categories
+      summary: Delete Category
+      description: Delete a category by ID. Only available to users with admin role.
+      operationId: deleteCategory
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - Category deleted successfully
         '400':
           $ref: '#/components/responses/ErrFailParseRequest'
         '401':
