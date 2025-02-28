@@ -114,7 +114,7 @@ type MentorUpdate struct {
 }
 
 type CreateStudentRequest struct {
-	Instance string `form:"instance" json:"instance" validate:"required,min=1,max=50"`
+	Instance string `json:"instance" validate:"required,min=1,max=50"`
 	Major    string `form:"major" json:"major" validate:"required,min=1,max=50"`
 }
 
@@ -124,7 +124,7 @@ type UpdateStudentRequest struct {
 }
 
 type CreateMentorRequest struct {
-	Specialization string `form:"specialization" json:"specialization" validate:"required,min=1,max=255"`
+	Specialization string `json:"specialization" validate:"required,min=1,max=255"`
 	Experience     string `form:"experience" json:"experience" validate:"required,min=1,max=1000"`
 	Price          int    `form:"price" json:"price" validate:"required,min=0"`
 }
