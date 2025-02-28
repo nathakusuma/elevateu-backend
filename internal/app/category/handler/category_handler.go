@@ -19,7 +19,7 @@ type categoryHandler struct {
 func InitCategoryHandler(
 	router fiber.Router,
 	svc contract.ICategoryService,
-	middleware *middleware.Middleware,
+	midw *middleware.Middleware,
 	validator validator.IValidator,
 ) {
 	handler := categoryHandler{
@@ -28,19 +28,17 @@ func InitCategoryHandler(
 	}
 
 	categoryGroup := router.Group("/categories")
+	categoryGroup.Use(midw.RequireAuthenticated)
 
 	categoryGroup.Post("/",
-		middleware.RequireAuthenticated,
-		middleware.RequireOneOfRoles(enum.UserRoleAdmin),
+		midw.RequireOneOfRoles(enum.UserRoleAdmin),
 		handler.createCategory)
 	categoryGroup.Get("/", handler.getAllCategories)
 	categoryGroup.Put("/:id",
-		middleware.RequireAuthenticated,
-		middleware.RequireOneOfRoles(enum.UserRoleAdmin),
+		midw.RequireOneOfRoles(enum.UserRoleAdmin),
 		handler.updateCategory)
 	categoryGroup.Delete("/:id",
-		middleware.RequireAuthenticated,
-		middleware.RequireOneOfRoles(enum.UserRoleAdmin),
+		midw.RequireOneOfRoles(enum.UserRoleAdmin),
 		handler.deleteCategory)
 }
 
