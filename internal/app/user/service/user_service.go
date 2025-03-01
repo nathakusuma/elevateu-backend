@@ -268,6 +268,17 @@ func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
+	// delete avatar
+	err = s.fileUtil.Delete(ctx, fmt.Sprintf("users/avatar/%s", id.String()))
+	if err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":        err,
+			"user.id":      id,
+			"requester.id": requesterID,
+		}, "[UserService][DeleteUser] Failed to delete avatar")
+		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+	}
+
 	log.Info(map[string]interface{}{
 		"user.id":      id,
 		"requester.id": requesterID,
