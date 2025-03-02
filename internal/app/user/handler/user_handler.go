@@ -41,6 +41,17 @@ func InitUserHandler(
 		midw.RequireAuthenticated,
 		handler.updateUser,
 	)
+	userGroup.Delete("/me",
+		midw.RequireAuthenticated,
+		handler.deleteUser,
+	)
+	userGroup.Put("/me/avatar",
+		midw.RequireAuthenticated,
+		handler.updateUserAvatar)
+
+	userGroup.Delete("/me/avatar",
+		midw.RequireAuthenticated,
+		handler.deleteUserAvatar)
 }
 
 func (c *userHandler) getUser(param string) fiber.Handler {
@@ -60,16 +71,14 @@ func (c *userHandler) getUser(param string) fiber.Handler {
 			}
 		}
 
-		user, err := c.svc.GetUserByID(ctx.Context(), userID)
-		if err != nil {
-			return err
+		var isMinimal bool
+		if param == "me" {
+			isMinimal = false
 		}
 
-		resp := dto.UserResponse{}
-		if param == "me" {
-			resp.PopulateFromEntity(user)
-		} else {
-			resp.PopulateMinimalFromEntity(user)
+		resp, err := c.svc.GetUserByID(ctx.Context(), userID, isMinimal)
+		if err != nil {
+			return err
 		}
 
 		return ctx.Status(fiber.StatusOK).JSON(map[string]interface{}{
@@ -81,14 +90,6 @@ func (c *userHandler) getUser(param string) fiber.Handler {
 func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 	var req dto.UpdateUserRequest
 
-	// Parse avatar file
-	if form, err := ctx.MultipartForm(); err == nil {
-		if filesHeader := form.File["avatar"]; len(filesHeader) > 0 {
-			req.Avatar = filesHeader[0]
-		}
-	}
-
-	// Parse user basic data
 	if err := ctx.BodyParser(&req); err != nil {
 		return errorpkg.ErrFailParseRequest
 	}
@@ -110,12 +111,56 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 		}
 	}
 
-	// Validate the main request
 	if err := c.val.ValidateStruct(req); err != nil {
 		return err
 	}
 
 	if err := c.svc.UpdateUser(ctx.Context(), userID, req); err != nil {
+		return err
+	}
+
+	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+func (c *userHandler) deleteUser(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	if err := c.svc.DeleteUser(ctx.Context(), userID); err != nil {
+		return err
+	}
+
+	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+// Handler specifically for avatar upload (multipart form)
+func (c *userHandler) updateUserAvatar(ctx *fiber.Ctx) error {
+	file, err := ctx.FormFile("avatar")
+	if err != nil {
+		return errorpkg.ErrFailParseRequest
+	}
+
+	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	if err2 := c.svc.UpdateUserAvatar(ctx.Context(), userID, file); err2 != nil {
+		return err2
+	}
+
+	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+func (c *userHandler) deleteUserAvatar(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	if err := c.svc.DeleteUserAvatar(ctx.Context(), userID); err != nil {
 		return err
 	}
 
