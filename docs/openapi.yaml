@@ -73,10 +73,6 @@ components:
           format: email
         role:
           $ref: '#/components/schemas/UserRole'
-        bio:
-          type: [ "string", "null" ]
-          examples:
-            - "Seorang programmer pemula yang sedang belajar backend"
         avatar_url:
           type: [ "string", "null" ]
           format: uri
