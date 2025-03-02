@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +15,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
+	"github.com/nathakusuma/elevateu-backend/pkg/sqlutil"
 )
 
 type userRepository struct {
@@ -270,38 +270,21 @@ func (r *userRepository) UpdateUser(ctx context.Context, req *dto.UserUpdate) er
 }
 
 func (r *userRepository) updateUserDynamic(ctx context.Context, tx sqlx.ExtContext, req *dto.UserUpdate) error {
-	// Build dynamic SQL for non-nil fields
-	var updates []string
-	var args []interface{}
-	argIndex := 1
+	builder := sqlutil.NewSQLUpdateBuilder("users").
+		WithUpdatedAt().
+		Where("id = ?", req.ID)
 
-	if req.Name != nil {
-		updates = append(updates, fmt.Sprintf("name = $%d", argIndex))
-		args = append(args, *req.Name)
-		argIndex++
+	query, args, err := builder.BuildFromStruct(req)
+	if err != nil {
+		return fmt.Errorf("failed to build update query: %w", err)
 	}
 
-	if req.HasAvatar != nil {
-		updates = append(updates, fmt.Sprintf("has_avatar = $%d", argIndex))
-		args = append(args, *req.HasAvatar)
-		argIndex++
-	}
-
-	// Add updated_at timestamp to always update this field
-	updates = append(updates, "updated_at = now()")
-
-	// If no fields to update, just return (no need to execute a query)
-	if len(args) == 0 {
+	// No fields to update (query is empty)
+	if query == "" {
 		return nil
 	}
 
-	// Build and execute the query
-	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d",
-		strings.Join(updates, ", "),
-		argIndex)
-	args = append(args, req.ID)
-
-	_, err := tx.ExecContext(ctx, query, args...)
+	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
@@ -311,34 +294,20 @@ func (r *userRepository) updateUserDynamic(ctx context.Context, tx sqlx.ExtConte
 
 func (r *userRepository) updateStudentDynamic(ctx context.Context, tx sqlx.ExtContext, userID uuid.UUID,
 	req dto.StudentUpdate) error {
-	// Build dynamic SQL for non-nil fields
-	var updates []string
-	var args []interface{}
-	argIndex := 1
+	builder := sqlutil.NewSQLUpdateBuilder("students").
+		Where("user_id = ?", userID)
 
-	if req.Instance != nil {
-		updates = append(updates, fmt.Sprintf("instance = $%d", argIndex))
-		args = append(args, *req.Instance)
-		argIndex++
+	query, args, err := builder.BuildFromStruct(&req)
+	if err != nil {
+		return fmt.Errorf("failed to build update query: %w", err)
 	}
 
-	if req.Major != nil {
-		updates = append(updates, fmt.Sprintf("major = $%d", argIndex))
-		args = append(args, *req.Major)
-		argIndex++
-	}
-
-	// If no fields to update, just return (no need to execute a query)
-	if len(updates) == 0 {
+	// No fields to update (query is empty)
+	if query == "" {
 		return nil
 	}
 
-	query := fmt.Sprintf("UPDATE students SET %s WHERE user_id = $%d",
-		strings.Join(updates, ", "),
-		argIndex)
-	args = append(args, userID)
-
-	_, err := tx.ExecContext(ctx, query, args...)
+	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to update student: %w", err)
 	}
@@ -348,40 +317,20 @@ func (r *userRepository) updateStudentDynamic(ctx context.Context, tx sqlx.ExtCo
 
 func (r *userRepository) updateMentorDynamic(ctx context.Context, tx sqlx.ExtContext, userID uuid.UUID,
 	req dto.MentorUpdate) error {
-	// Build dynamic SQL for non-nil fields
-	var updates []string
-	var args []interface{}
-	argIndex := 1
+	builder := sqlutil.NewSQLUpdateBuilder("mentors").
+		Where("user_id = ?", userID)
 
-	if req.Specialization != nil {
-		updates = append(updates, fmt.Sprintf("specialization = $%d", argIndex))
-		args = append(args, *req.Specialization)
-		argIndex++
+	query, args, err := builder.BuildFromStruct(&req)
+	if err != nil {
+		return fmt.Errorf("failed to build update query: %w", err)
 	}
 
-	if req.Experience != nil {
-		updates = append(updates, fmt.Sprintf("experience = $%d", argIndex))
-		args = append(args, *req.Experience)
-		argIndex++
-	}
-
-	if req.Price != nil {
-		updates = append(updates, fmt.Sprintf("price = $%d", argIndex))
-		args = append(args, *req.Price)
-		argIndex++
-	}
-
-	// If no fields to update, just return (no need to execute a query)
-	if len(updates) == 0 {
+	// No fields to update (query is empty)
+	if query == "" {
 		return nil
 	}
 
-	query := fmt.Sprintf("UPDATE mentors SET %s WHERE user_id = $%d",
-		strings.Join(updates, ", "),
-		argIndex)
-	args = append(args, userID)
-
-	_, err := tx.ExecContext(ctx, query, args...)
+	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to update mentor: %w", err)
 	}

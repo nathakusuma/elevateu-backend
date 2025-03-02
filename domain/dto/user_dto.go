@@ -118,8 +118,8 @@ type UserUpdate struct {
 	PasswordHash *string   `db:"password_hash"`
 	HasAvatar    *bool     `db:"has_avatar"`
 
-	Student *StudentUpdate `db:"student"`
-	Mentor  *MentorUpdate  `db:"mentor"`
+	Student *StudentUpdate `db:"-"`
+	Mentor  *MentorUpdate  `db:"-"`
 }
 
 type StudentUpdate struct {
