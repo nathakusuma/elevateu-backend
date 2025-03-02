@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/cache"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,11 +17,11 @@ import (
 
 type paymentRepository struct {
 	db    *sqlx.DB
-	redis *redis.Client
+	cache cache.ICache
 }
 
-func NewPaymentRepository(db *sqlx.DB, redis *redis.Client) contract.IPaymentRepository {
-	return &paymentRepository{db: db, redis: redis}
+func NewPaymentRepository(db *sqlx.DB, cache cache.ICache) contract.IPaymentRepository {
+	return &paymentRepository{db: db, cache: cache}
 }
 
 func (r *paymentRepository) BeginTx() (*sqlx.Tx, error) {
@@ -33,7 +34,7 @@ func (r *paymentRepository) CreatePayment(ctx context.Context, tx sqlx.ExtContex
 		tx = r.db
 	}
 
-	if err := r.redis.Set(ctx, "payment:"+payment.ID.String(), payload, 1*time.Hour).Err(); err != nil {
+	if err := r.cache.Set(ctx, "payment:"+payment.ID.String(), payload, 1*time.Hour); err != nil {
 		return fmt.Errorf("failed to cache payment payload: %w", err)
 	}
 
@@ -74,7 +75,7 @@ func (r *paymentRepository) GetPaymentByID(ctx context.Context, tx sqlx.QueryerC
 	}
 
 	var payload []*entity.PaymentPayload
-	if err := r.redis.Get(ctx, "payment:"+id.String()).Scan(&payload); err != nil {
+	if err := r.cache.Get(ctx, "payment:"+id.String(), &payload); err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, nil, fmt.Errorf("payment payload not found: %w", err)
 		}

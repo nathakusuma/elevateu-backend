@@ -1,9 +1,9 @@
 package main
 
 import (
+	"github.com/nathakusuma/elevateu-backend/internal/infra/cache"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
-	"github.com/nathakusuma/elevateu-backend/internal/infra/redis"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/server"
 	"github.com/nathakusuma/elevateu-backend/pkg/log"
 )
@@ -21,12 +21,13 @@ func main() {
 		env.GetEnv().DBName,
 		env.GetEnv().DBSSLMode,
 	)
-	redisClient := redis.NewRedisPool(
+	redisClient := cache.NewRedis(
 		env.GetEnv().RedisHost,
 		env.GetEnv().RedisPort,
 		env.GetEnv().RedisPass,
 		env.GetEnv().RedisDB,
 	)
+
 	defer postgresDB.Close()
 	defer redisClient.Close()
 

@@ -3,57 +3,25 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/redis/go-redis/v9"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
+	"github.com/nathakusuma/elevateu-backend/domain/enum"
 )
 
 type authRepository struct {
-	db  *sqlx.DB
-	rds *redis.Client
+	db *sqlx.DB
 }
 
-func NewAuthRepository(db *sqlx.DB, rds *redis.Client) contract.IAuthRepository {
+func NewAuthRepository(db *sqlx.DB) contract.IAuthRepository {
 	return &authRepository{
-		db:  db,
-		rds: rds,
+		db: db,
 	}
-}
-
-func (r *authRepository) SetRegisterOTP(ctx context.Context, email string, otp string) error {
-	if err := r.rds.Set(ctx, "auth:"+email+":register_otp", otp, 10*time.Minute).Err(); err != nil {
-		return fmt.Errorf("failed to set otp: %w", err)
-	}
-
-	return nil
-}
-
-func (r *authRepository) GetRegisterOTP(ctx context.Context, email string) (string, error) {
-	result, err := r.rds.Get(ctx, "auth:"+email+":register_otp").Result()
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return "", fmt.Errorf("otp not found: %w", err)
-		}
-
-		return "", fmt.Errorf("failed to get otp: %w", err)
-	}
-
-	return result, nil
-}
-
-func (r *authRepository) DeleteRegisterOTP(ctx context.Context, email string) error {
-	if err := r.rds.Del(ctx, "auth:"+email+":register_otp").Err(); err != nil {
-		return fmt.Errorf("failed to delete otp: %w", err)
-	}
-
-	return nil
 }
 
 func (r *authRepository) CreateAuthSession(ctx context.Context, session *entity.AuthSession) error {
@@ -75,31 +43,117 @@ func (r *authRepository) createAuthSession(ctx context.Context, tx sqlx.ExtConte
 }
 
 func (r *authRepository) GetAuthSessionByToken(ctx context.Context, token string) (*entity.AuthSession, error) {
-	var authSession entity.AuthSession
-
-	statement := `SELECT
+	baseQuery := `SELECT
         s.token,
         s.user_id,
+        s.created_at,
         s.expires_at,
-        u.id AS "user.id",
-        u.role AS "user.role",
-        u.name AS "user.name",
-        u.email AS "user.email",
-        u.bio AS "user.bio",
-        u.avatar_url AS "user.avatar_url",
-        u.created_at AS "user.created_at",
-        u.updated_at AS "user.updated_at"
+        u.id,
+        u.name,
+        u.email,
+        u.password_hash,
+        u.role,
+        u.has_avatar,
+        u.created_at as user_created_at,
+        u.updated_at as user_updated_at,
+        st.instance,
+        st.major,
+        m.specialization,
+        m.experience,
+        m.rating,
+        m.rating_count,
+        m.rating_total,
+        m.price,
+        m.balance
     FROM auth_sessions s
     JOIN users u ON u.id = s.user_id
-    WHERE s.token = $1 AND u.deleted_at IS NULL
-    `
+    LEFT JOIN students st ON u.id = st.user_id AND u.role = 'student'
+    LEFT JOIN mentors m ON u.id = m.user_id AND u.role = 'mentor'
+    WHERE s.token = $1`
 
-	err := r.db.GetContext(ctx, &authSession, statement, token)
+	rows, err := r.db.QueryxContext(ctx, baseQuery, token)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("auth session not found: %w", err)
+		return nil, fmt.Errorf("error querying auth session: %w", err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return nil, fmt.Errorf("auth session not found: %w", sql.ErrNoRows)
+	}
+
+	// Temporary struct to handle the flat join result
+	type SessionJoin struct {
+		// Auth Session fields
+		Token     string    `db:"token"`
+		UserID    uuid.UUID `db:"user_id"`
+		CreatedAt time.Time `db:"created_at"`
+		ExpiresAt time.Time `db:"expires_at"`
+
+		// User fields
+		ID            uuid.UUID     `db:"id"`
+		Name          string        `db:"name"`
+		Email         string        `db:"email"`
+		PasswordHash  string        `db:"password_hash"`
+		Role          enum.UserRole `db:"role"`
+		HasAvatar     bool          `db:"has_avatar"`
+		UserCreatedAt time.Time     `db:"user_created_at"`
+		UserUpdatedAt time.Time     `db:"user_updated_at"`
+
+		// Student fields
+		Instance sql.NullString `db:"instance"`
+		Major    sql.NullString `db:"major"`
+
+		// Mentor fields
+		Specialization sql.NullString  `db:"specialization"`
+		Experience     sql.NullString  `db:"experience"`
+		Rating         sql.NullFloat64 `db:"rating"`
+		RatingCount    sql.NullInt64   `db:"rating_count"`
+		RatingTotal    sql.NullFloat64 `db:"rating_total"`
+		Price          sql.NullInt64   `db:"price"`
+		Balance        sql.NullInt64   `db:"balance"`
+	}
+
+	var join SessionJoin
+	if err := rows.StructScan(&join); err != nil {
+		return nil, fmt.Errorf("error scanning auth session: %w", err)
+	}
+
+	user := entity.User{
+		ID:           join.ID,
+		Name:         join.Name,
+		Email:        join.Email,
+		PasswordHash: join.PasswordHash,
+		Role:         join.Role,
+		HasAvatar:    join.HasAvatar,
+		CreatedAt:    join.UserCreatedAt,
+		UpdatedAt:    join.UserUpdatedAt,
+	}
+
+	if join.Role == enum.UserRoleStudent && join.Instance.Valid {
+		user.Student = &entity.Student{
+			Instance: join.Instance.String,
+			Major:    join.Major.String,
 		}
-		return nil, fmt.Errorf("failed to get auth session by token: %w", err)
+	}
+
+	if join.Role == enum.UserRoleMentor && join.Specialization.Valid {
+		user.Mentor = &entity.Mentor{
+			Specialization: join.Specialization.String,
+			Experience:     join.Experience.String,
+			Rating:         join.Rating.Float64,
+			RatingCount:    int(join.RatingCount.Int64),
+			RatingTotal:    join.RatingTotal.Float64,
+			Price:          int(join.Price.Int64),
+			Balance:        int(join.Balance.Int64),
+		}
+	}
+
+	authSession := entity.AuthSession{
+		Token:     join.Token,
+		UserID:    join.UserID,
+		CreatedAt: join.CreatedAt,
+		ExpiresAt: join.ExpiresAt,
+		User:      user,
 	}
 
 	return &authSession, nil
@@ -118,33 +172,4 @@ func (r *authRepository) deleteAuthSession(ctx context.Context, tx sqlx.ExtConte
 
 func (r *authRepository) DeleteAuthSession(ctx context.Context, userID uuid.UUID) error {
 	return r.deleteAuthSession(ctx, r.db, userID)
-}
-
-func (r *authRepository) SetPasswordResetOTP(ctx context.Context, email, otp string) error {
-	if err := r.rds.Set(ctx, "auth:"+email+":reset_password_otp", otp, 10*time.Minute).Err(); err != nil {
-		return fmt.Errorf("failed to set otp: %w", err)
-	}
-
-	return nil
-}
-
-func (r *authRepository) GetPasswordResetOTP(ctx context.Context, email string) (string, error) {
-	result, err := r.rds.Get(ctx, "auth:"+email+":reset_password_otp").Result()
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return "", fmt.Errorf("otp not found: %w", err)
-		}
-
-		return "", fmt.Errorf("failed to get otp: %w", err)
-	}
-
-	return result, nil
-}
-
-func (r *authRepository) DeletePasswordResetOTP(ctx context.Context, email string) error {
-	if err := r.rds.Del(ctx, "auth:"+email+":reset_password_otp").Err(); err != nil {
-		return fmt.Errorf("failed to delete otp: %w", err)
-	}
-
-	return nil
 }

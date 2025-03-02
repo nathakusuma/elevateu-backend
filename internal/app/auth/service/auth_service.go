@@ -14,6 +14,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/cache"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
 	"github.com/nathakusuma/elevateu-backend/pkg/bcrypt"
 	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
@@ -28,6 +29,7 @@ type authService struct {
 	repo     contract.IAuthRepository
 	userSvc  contract.IUserService
 	bcrypt   bcrypt.IBcrypt
+	cache    cache.ICache
 	fileUtil fileutil.IFileUtil
 	jwt      jwt.IJwt
 	mailer   mail.IMailer
@@ -39,6 +41,7 @@ func NewAuthService(
 	authRepo contract.IAuthRepository,
 	userSvc contract.IUserService,
 	bcrypt bcrypt.IBcrypt,
+	cache cache.ICache,
 	fileUtil fileutil.IFileUtil,
 	jwt jwt.IJwt,
 	mailer mail.IMailer,
@@ -49,6 +52,7 @@ func NewAuthService(
 		repo:     authRepo,
 		userSvc:  userSvc,
 		bcrypt:   bcrypt,
+		cache:    cache,
 		fileUtil: fileUtil,
 		jwt:      jwt,
 		mailer:   mailer,
@@ -69,7 +73,6 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestRegisterOTP] failed to get user by email")
-
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
@@ -80,20 +83,18 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestRegisterOTP] failed to generate otp")
-
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
 	otp := strconv.Itoa(otpInt)
 
 	// save otp
-	err = s.repo.SetRegisterOTP(ctx, email, otp)
+	err = s.cache.Set(ctx, "auth:"+email+":register_otp", otp, 10*time.Minute)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestRegisterOTP] failed to save otp")
-
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
@@ -131,9 +132,10 @@ func (s *authService) Register(ctx context.Context,
 	loggableReq.OTP = ""
 
 	// get otp
-	savedOtp, err := s.repo.GetRegisterOTP(ctx, req.Email)
+	var savedOtp string
+	err := s.cache.Get(ctx, "auth:"+req.Email+":register_otp", &savedOtp)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "otp not found") {
+		if strings.HasPrefix(err.Error(), "not found") {
 			return resp, errorpkg.ErrInvalidOTP
 		}
 
@@ -141,7 +143,6 @@ func (s *authService) Register(ctx context.Context,
 			"error":   err,
 			"request": loggableReq,
 		}, "[AuthService][Register] failed to get otp")
-
 		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
@@ -150,13 +151,12 @@ func (s *authService) Register(ctx context.Context,
 	}
 
 	// delete otp
-	err = s.repo.DeleteRegisterOTP(ctx, req.Email)
+	err = s.cache.Del(ctx, "auth:"+req.Email+":register_otp")
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
 			"request": loggableReq,
 		}, "[AuthService][Register] failed to delete otp")
-
 		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
@@ -335,7 +335,7 @@ func (s *authService) RequestPasswordResetOTP(ctx context.Context, email string)
 	otp := strconv.Itoa(otpInt)
 
 	// save otp
-	err = s.repo.SetPasswordResetOTP(ctx, email, otp)
+	err = s.cache.Set(ctx, "auth:"+email+":reset_password_otp", otp, 10*time.Minute)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":      err,
@@ -369,9 +369,10 @@ func (s *authService) RequestPasswordResetOTP(ctx context.Context, email string)
 
 func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRequest) (dto.LoginResponse, error) {
 	// get otp
-	savedOtp, err := s.repo.GetPasswordResetOTP(ctx, req.Email)
+	var savedOtp string
+	err := s.cache.Get(ctx, "auth:"+req.Email+":reset_password_otp", &savedOtp)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "otp not found") {
+		if strings.HasPrefix(err.Error(), "not found") {
 			return dto.LoginResponse{}, errorpkg.ErrInvalidOTP
 		}
 
@@ -387,7 +388,7 @@ func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRe
 	}
 
 	// delete otp
-	err = s.repo.DeletePasswordResetOTP(ctx, req.Email)
+	err = s.cache.Del(ctx, "auth:"+req.Email+":reset_password_otp")
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":      err,

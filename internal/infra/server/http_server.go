@@ -4,7 +4,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
-	"github.com/redis/go-redis/v9"
 
 	authhnd "github.com/nathakusuma/elevateu-backend/internal/app/auth/handler"
 	authrepo "github.com/nathakusuma/elevateu-backend/internal/app/auth/repository"
@@ -21,6 +20,7 @@ import (
 	userhnd "github.com/nathakusuma/elevateu-backend/internal/app/user/handler"
 	userrepo "github.com/nathakusuma/elevateu-backend/internal/app/user/repository"
 	usersvc "github.com/nathakusuma/elevateu-backend/internal/app/user/service"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/cache"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/gcp"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
@@ -37,7 +37,7 @@ import (
 type HTTPServer interface {
 	Start(part string)
 	MountMiddlewares()
-	MountRoutes(db *sqlx.DB, rds *redis.Client)
+	MountRoutes(db *sqlx.DB, cache cache.ICache)
 	GetApp() *fiber.App
 }
 
@@ -86,7 +86,7 @@ func (s *httpServer) MountMiddlewares() {
 	s.app.Use(middleware.RecoverConfig())
 }
 
-func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
+func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	gcpClient := gcp.NewStorageClient()
 	bcryptInstance := bcrypt.GetBcrypt()
 	fileUtil := fileutil.NewFileUtil(gcpClient)
@@ -105,13 +105,13 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	v1 := api.Group("/v1")
 
 	userRepository := userrepo.NewUserRepository(db)
-	authRepository := authrepo.NewAuthRepository(db, rds)
-	paymentRepository := paymentrepo.NewPaymentRepository(db, rds)
+	authRepository := authrepo.NewAuthRepository(db)
+	paymentRepository := paymentrepo.NewPaymentRepository(db, cache)
 	categoryRepository := categoryrepo.NewCategoryRepository(db)
 	courseRepository := courserepo.NewCourseRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
-	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, fileUtil, jwtAccess, mailer,
+	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, cache, fileUtil, jwtAccess, mailer,
 		randomGenerator, uuidInstance)
 	midtransService := paymentsvc.NewMidtransService()
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)
