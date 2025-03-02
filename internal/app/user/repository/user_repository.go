@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -125,25 +126,94 @@ func (r *userRepository) getUserByCondition(ctx context.Context, whereClause str
 	var user entity.User
 
 	baseQuery := `SELECT
-		id,
-		name,
-		email,
-		password_hash,
-		role,
-		has_avatar,
-		created_at,
-		updated_at
-	FROM users
+		u.id,
+		u.name,
+		u.email,
+		u.password_hash,
+		u.role,
+		u.has_avatar,
+		u.created_at,
+		u.updated_at,
+		s.instance,
+		s.major,
+		m.specialization,
+		m.experience,
+		m.rating,
+		m.rating_count,
+		m.rating_total,
+		m.price,
+		m.balance
+	FROM users u
+	LEFT JOIN students s ON u.id = s.user_id AND u.role = 'student'
+	LEFT JOIN mentors m ON u.id = m.user_id AND u.role = 'mentor'
 	WHERE %s`
 
 	statement := fmt.Sprintf(baseQuery, whereClause)
 
-	err := r.db.GetContext(ctx, &user, statement, args...)
+	rows, err := r.db.QueryxContext(ctx, statement, args...)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("user not found: %w", err)
+		return nil, fmt.Errorf("error querying user: %w", err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return nil, fmt.Errorf("user not found: %w", sql.ErrNoRows)
+	}
+
+	// Struct to scan all fields
+	type UserJoin struct {
+		ID             uuid.UUID       `db:"id"`
+		Name           string          `db:"name"`
+		Email          string          `db:"email"`
+		PasswordHash   string          `db:"password_hash"`
+		Role           enum.UserRole   `db:"role"`
+		HasAvatar      bool            `db:"has_avatar"`
+		CreatedAt      time.Time       `db:"created_at"`
+		UpdatedAt      time.Time       `db:"updated_at"`
+		Instance       sql.NullString  `db:"instance"`
+		Major          sql.NullString  `db:"major"`
+		Specialization sql.NullString  `db:"specialization"`
+		Experience     sql.NullString  `db:"experience"`
+		Rating         sql.NullFloat64 `db:"rating"`
+		RatingCount    sql.NullInt64   `db:"rating_count"`
+		RatingTotal    sql.NullFloat64 `db:"rating_total"`
+		Price          sql.NullInt64   `db:"price"`
+		Balance        sql.NullInt64   `db:"balance"`
+	}
+
+	var userJoin UserJoin
+	if err := rows.StructScan(&userJoin); err != nil {
+		return nil, fmt.Errorf("error scanning user: %w", err)
+	}
+
+	user = entity.User{
+		ID:           userJoin.ID,
+		Name:         userJoin.Name,
+		Email:        userJoin.Email,
+		PasswordHash: userJoin.PasswordHash,
+		Role:         userJoin.Role,
+		HasAvatar:    userJoin.HasAvatar,
+		CreatedAt:    userJoin.CreatedAt,
+		UpdatedAt:    userJoin.UpdatedAt,
+	}
+
+	if user.Role == enum.UserRoleStudent && userJoin.Instance.Valid {
+		user.Student = &entity.Student{
+			Instance: userJoin.Instance.String,
+			Major:    userJoin.Major.String,
 		}
-		return nil, err
+	}
+
+	if user.Role == enum.UserRoleMentor && userJoin.Specialization.Valid {
+		user.Mentor = &entity.Mentor{
+			Specialization: userJoin.Specialization.String,
+			Experience:     userJoin.Experience.String,
+			Rating:         userJoin.Rating.Float64,
+			RatingCount:    int(userJoin.RatingCount.Int64),
+			RatingTotal:    userJoin.RatingTotal.Float64,
+			Price:          int(userJoin.Price.Int64),
+			Balance:        int(userJoin.Balance.Int64),
+		}
 	}
 
 	return &user, nil
@@ -156,62 +226,7 @@ func (r *userRepository) GetUserByField(ctx context.Context, field string, value
 		return nil, err
 	}
 
-	// Fetch additional role-specific data
-	if user.Role == enum.UserRoleStudent {
-		student, err := r.getStudentByUserID(ctx, user.ID)
-		if err != nil {
-			return nil, err
-		}
-		user.Student = student
-	} else if user.Role == enum.UserRoleMentor {
-		mentor, err := r.getMentorByUserID(ctx, user.ID)
-		if err != nil {
-			return nil, err
-		}
-		user.Mentor = mentor
-	}
-
 	return user, nil
-}
-
-func (r *userRepository) getStudentByUserID(ctx context.Context, userID uuid.UUID) (*entity.Student, error) {
-	var student entity.Student
-
-	err := r.db.GetContext(ctx, &student,
-		`SELECT instance, major
-		FROM students
-		WHERE user_id = $1`,
-		userID)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("student data not found: %w", err)
-		}
-		return nil, err
-	}
-
-	return &student, nil
-}
-
-func (r *userRepository) getMentorByUserID(ctx context.Context, userID uuid.UUID) (*entity.Mentor, error) {
-	var mentor entity.Mentor
-
-	err := r.db.GetContext(ctx, &mentor,
-		`SELECT
-			specialization, experience, rating, rating_count,
-			rating_total, price, balance
-		FROM mentors
-		WHERE user_id = $1`,
-		userID)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("mentor data not found: %w", err)
-		}
-		return nil, err
-	}
-
-	return &mentor, nil
 }
 
 func (r *userRepository) UpdateUser(ctx context.Context, req *dto.UserUpdate) error {
