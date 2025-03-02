@@ -58,7 +58,7 @@ func (s *courseService) CreateCourse(ctx context.Context,
 	}
 
 	previewVideoPath := fmt.Sprintf("courses/preview_video/%s", courseID)
-	previewVideoUploadURL, err := s.fileUtil.GetUploadSignedURL(previewVideoPath)
+	previewVideoUploadURL, err := s.fileUtil.GetUploadSignedURL(previewVideoPath, "video/mp4")
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
@@ -283,7 +283,7 @@ func (s *courseService) DeleteCourse(ctx context.Context, id uuid.UUID) error {
 }
 
 func (s *courseService) GetPreviewVideoUploadURL(_ context.Context, id uuid.UUID) (string, error) {
-	url, err := s.fileUtil.GetUploadSignedURL(fmt.Sprintf("courses/preview_video/%s", id))
+	url, err := s.fileUtil.GetUploadSignedURL(fmt.Sprintf("courses/preview_video/%s", id), "video/mp4")
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,

@@ -23,7 +23,7 @@ type IFileUtil interface {
 	Upload(ctx context.Context, file io.Reader, path string) (string, error)
 	GetFullURL(path string) string
 	GetSignedURL(path string) (string, error)
-	GetUploadSignedURL(path string) (string, error)
+	GetUploadSignedURL(path, contentType string) (string, error)
 	Delete(ctx context.Context, path string) error
 	ValidateAndUploadFile(ctx context.Context, header *multipart.FileHeader, allowedTypes []string,
 		path string) (string, error)

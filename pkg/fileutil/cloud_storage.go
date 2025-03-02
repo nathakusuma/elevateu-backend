@@ -53,13 +53,19 @@ func (u *fileUtil) GetSignedURL(path string) (string, error) {
 	return url, nil
 }
 
-func (u *fileUtil) GetUploadSignedURL(path string) (string, error) {
+func (u *fileUtil) GetUploadSignedURL(path, contentType string) (string, error) {
 	bucket := env.GetEnv().GCPStorageBucketName
 
-	url, err := u.client.Bucket(bucket).SignedURL(path, &storage.SignedURLOptions{
+	options := &storage.SignedURLOptions{
 		Method:  http.MethodPut,
 		Expires: time.Now().Add(10 * time.Minute),
-	})
+	}
+
+	if contentType != "" {
+		options.ContentType = contentType
+	}
+
+	url, err := u.client.Bucket(bucket).SignedURL(path, options)
 	if err != nil {
 		return "", fmt.Errorf("client.Bucket(%q).SignedURL: %w", bucket, err)
 	}
