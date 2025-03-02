@@ -81,6 +81,10 @@ func (s *courseService) CreateCourse(ctx context.Context,
 	// Create course
 	err = s.repo.CreateCourse(ctx, course)
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "category not found") {
+			return dto.CreateCourseResponse{}, errorpkg.ErrValidation.WithDetail("Category not found")
+		}
+
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
 			"request": req,
@@ -178,6 +182,8 @@ func (s *courseService) UpdateCourse(ctx context.Context, id uuid.UUID, req *dto
 	if err != nil {
 		if err.Error() == "course not found" {
 			return errorpkg.ErrNotFound
+		} else if strings.HasPrefix(err.Error(), "category not found") {
+			return errorpkg.ErrValidation.WithDetail("Category not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{

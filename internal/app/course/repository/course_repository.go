@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
@@ -41,7 +42,16 @@ func (r *courseRepository) CreateCourse(ctx context.Context, course *entity.Cour
 	`
 
 	_, err := r.db.NamedExecContext(ctx, query, course)
-	return err
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.ConstraintName == "courses_category_id_fkey" {
+			return fmt.Errorf("category not found: %w", err)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (r *courseRepository) GetCourseByID(ctx context.Context, id uuid.UUID) (*entity.Course, error) {
@@ -258,6 +268,11 @@ func (r *courseRepository) UpdateCourse(ctx context.Context, tx sqlx.ExtContext,
 	// Execute
 	result, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.ConstraintName == "courses_category_id_fkey" {
+			return fmt.Errorf("category not found: %w", err)
+		}
+
 		return err
 	}
 
