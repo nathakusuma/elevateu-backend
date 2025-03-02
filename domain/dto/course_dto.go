@@ -27,17 +27,17 @@ type CourseResponse struct {
 func (c *CourseResponse) PopulateFromEntity(course *entity.Course,
 	urlSigner func(string) (string, error)) error {
 	var err error
-	c.TeacherAvatarURL, err = urlSigner(course.TeacherAvatarURL)
+	c.TeacherAvatarURL, err = urlSigner(fmt.Sprintf("courses/teacher_avatar/%s", course.ID))
 	if err != nil {
 		return fmt.Errorf("failed to sign teacher avatar URL: %w", err)
 	}
 
-	c.ThumbnailURL, err = urlSigner(course.ThumbnailURL)
+	c.ThumbnailURL, err = urlSigner(fmt.Sprintf("courses/thumbnail/%s", course.ID))
 	if err != nil {
 		return fmt.Errorf("failed to sign thumbnail URL: %w", err)
 	}
 
-	c.PreviewVideoURL, err = urlSigner(course.PreviewVideoURL)
+	c.PreviewVideoURL, err = urlSigner(fmt.Sprintf("courses/preview_video/%s", course.ID))
 	if err != nil {
 		return fmt.Errorf("failed to sign preview video URL: %w", err)
 	}
