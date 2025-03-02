@@ -53,7 +53,17 @@ func (c *courseHandler) createCourse(ctx *fiber.Ctx) error {
 		return errorpkg.ErrFailParseRequest
 	}
 
-	if err := c.val.ValidateStruct(req); err != nil {
+	var err error
+	req.TeacherAvatar, err = ctx.FormFile("teacher_avatar")
+	if err != nil {
+		return errorpkg.ErrFailParseRequest.WithDetail("Fail to parse teacher avatar")
+	}
+	req.Thumbnail, err = ctx.FormFile("thumbnail")
+	if err != nil {
+		return errorpkg.ErrFailParseRequest.WithDetail("Fail to parse thumbnail")
+	}
+
+	if err = c.val.ValidateStruct(req); err != nil {
 		return err
 	}
 
@@ -77,6 +87,9 @@ func (c *courseHandler) getCourses(ctx *fiber.Ctx) error {
 	}
 
 	if err := c.val.ValidateStruct(query); err != nil {
+		return err
+	}
+	if err := c.val.ValidateStruct(pageReq); err != nil {
 		return err
 	}
 
@@ -116,6 +129,19 @@ func (c *courseHandler) updateCourse(ctx *fiber.Ctx) error {
 	var req dto.UpdateCourseRequest
 	if err2 := ctx.BodyParser(&req); err2 != nil {
 		return errorpkg.ErrFailParseRequest
+	}
+
+	// Handle file uploads
+	teacherAvatar, err := ctx.FormFile("teacher_avatar")
+	if err == nil {
+		// Only set if file was uploaded
+		req.TeacherAvatar = teacherAvatar
+	}
+
+	thumbnail, err := ctx.FormFile("thumbnail")
+	if err == nil {
+		// Only set if file was uploaded
+		req.Thumbnail = thumbnail
 	}
 
 	if err2 := c.val.ValidateStruct(req); err2 != nil {

@@ -59,12 +59,12 @@ func (c *CourseResponse) PopulateFromEntity(course *entity.Course,
 }
 
 type CreateCourseRequest struct {
-	CategoryID    uuid.UUID             `form:"category_id" validate:"required,uuid"`
-	Title         string                `form:"title" validate:"required,min=3,max=50"`
-	Description   string                `form:"description" validate:"required,min=3,max=1000"`
-	TeacherName   string                `form:"teacher_name" validate:"required,min=3,max=50"`
-	TeacherAvatar *multipart.FileHeader `form:"teacher_avatar" validate:"required"`
-	Thumbnail     *multipart.FileHeader `form:"thumbnail" validate:"required"`
+	CategoryID    uuid.UUID `form:"category_id" validate:"required,uuid"`
+	Title         string    `form:"title" validate:"required,min=3,max=50"`
+	Description   string    `form:"description" validate:"required,min=3,max=1000"`
+	TeacherName   string    `form:"teacher_name" validate:"required,min=3,max=50"`
+	TeacherAvatar *multipart.FileHeader
+	Thumbnail     *multipart.FileHeader
 }
 
 type CreateCourseResponse struct {
@@ -89,10 +89,10 @@ type CourseUpdate struct {
 }
 
 type UpdateCourseRequest struct {
-	CategoryID    *uuid.UUID            `form:"category_id" validate:"omitempty,uuid"`
-	Title         *string               `form:"title" validate:"omitempty,min=3,max=50"`
-	Description   *string               `form:"description" validate:"omitempty,min=3,max=1000"`
-	TeacherName   *string               `form:"teacher_name" validate:"omitempty,min=3,max=60"`
-	TeacherAvatar *multipart.FileHeader `form:"teacher_avatar"`
-	Thumbnail     *multipart.FileHeader `form:"thumbnail"`
+	CategoryID    *uuid.UUID `form:"category_id" validate:"omitempty,uuid"`
+	Title         *string    `form:"title" validate:"omitempty,min=3,max=50"`
+	Description   *string    `form:"description" validate:"omitempty,min=3,max=1000"`
+	TeacherName   *string    `form:"teacher_name" validate:"omitempty,min=3,max=60"`
+	TeacherAvatar *multipart.FileHeader
+	Thumbnail     *multipart.FileHeader
 }
