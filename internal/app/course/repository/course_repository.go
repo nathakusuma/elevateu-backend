@@ -14,6 +14,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
+	"github.com/nathakusuma/elevateu-backend/pkg/sqlutil"
 )
 
 type courseRepository struct {
@@ -212,54 +213,32 @@ func (r *courseRepository) UpdateCourse(ctx context.Context, tx sqlx.ExtContext,
 		tx = r.db
 	}
 
-	// Dynamic update query based on which fields are provided
-	query := "UPDATE courses SET updated_at = NOW()"
-	var args []interface{}
-	argIndex := 1
+	builder := sqlutil.NewSQLUpdateBuilder("courses").
+		WithUpdatedAt().
+		Where("id = ?", updates.ID)
 
-	if updates.CategoryID != nil {
-		query += fmt.Sprintf(", category_id = $%d", argIndex)
-		args = append(args, *updates.CategoryID)
-		argIndex++
+	query, args, err := builder.BuildFromStruct(updates)
+	if err != nil {
+		return fmt.Errorf("failed to build update query: %w", err)
 	}
 
-	if updates.Title != nil {
-		query += fmt.Sprintf(", title = $%d", argIndex)
-		args = append(args, *updates.Title)
-		argIndex++
+	// No fields to update (query is empty)
+	if query == "" {
+		return nil
 	}
 
-	if updates.Description != nil {
-		query += fmt.Sprintf(", description = $%d", argIndex)
-		args = append(args, *updates.Description)
-		argIndex++
-	}
-
-	if updates.TeacherName != nil {
-		query += fmt.Sprintf(", teacher_name = $%d", argIndex)
-		args = append(args, *updates.TeacherName)
-		argIndex++
-	}
-
-	// Add WHERE id
-	query += fmt.Sprintf(" WHERE id = $%d", argIndex)
-	args = append(args, updates.ID)
-
-	// Execute
 	result, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.ConstraintName == "courses_category_id_fkey" {
 			return fmt.Errorf("category not found: %w", err)
 		}
-
-		return err
+		return fmt.Errorf("failed to update course: %w", err)
 	}
 
-	// Check rows affected
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 
 	if rowsAffected == 0 {
