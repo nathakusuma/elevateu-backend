@@ -736,14 +736,14 @@ paths:
       tags:
         - Users
       summary: Update User Profile
-      description: Update the current user's profile. This method allows partial updates and supports multipart/form-data for avatar uploads.
+      description: Update the current user's profile
       operationId: updateUserMe
       security:
         - bearerAuth: [ ]
       requestBody:
         required: true
         content:
-          multipart/form-data:
+          application/json:
             schema:
               type: object
               properties:
@@ -754,10 +754,6 @@ paths:
                   pattern: "^[\x00-\x7F]*$"  # ASCII characters only
                   examples:
                     - "Natha Kusuma :)"
-                avatar:
-                  type: string
-                  format: binary
-                  description: User avatar image (max 2MB, image formats only)
                 student:
                   type: object
                   properties:
@@ -766,7 +762,7 @@ paths:
                       minLength: 1
                       maxLength: 50
                       examples:
-                        - "Universitas Indonesia"
+                        - "Universitas Brawijaya"
                     major:
                       type: string
                       minLength: 1
@@ -787,7 +783,7 @@ paths:
                       minLength: 1
                       maxLength: 1000
                       examples:
-                        - "5 years working as backend developer at Gojek"
+                        - "5 years working as backend developer at a Tech Company"
                     price:
                       type: integer
                       minimum: 0
@@ -800,10 +796,78 @@ paths:
           $ref: '#/components/responses/ErrFailParseRequest'
         '401':
           $ref: '#/components/responses/BearerTokenErrors'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Users
+      summary: Delete User
+      description: Deletes current user.
+      operationId: deleteUser
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '204':
+          description: Success - User deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /users/me/avatar:
+    put:
+      tags:
+        - Users
+      summary: Update User Avatar
+      description: Update the current user's avatar
+      operationId: updateUserAvatar
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: User avatar image (max 2MB, image formats only)
+      responses:
+        '204':
+          description: Success - Avatar updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
         '413':
           $ref: '#/components/responses/ErrFileTooLarge'
         '422':
-          $ref: '#/components/responses/ErrValidation'
+          $ref: '#/components/responses/ErrInvalidFileFormat'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Users
+      summary: Delete User Avatar
+      description: Delete the current user's avatar and revert to default
+      operationId: deleteUserAvatar
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '204':
+          description: Success - Avatar deleted successfully
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
         '500':
           $ref: '#/components/responses/ErrInternalServer'
 
@@ -839,35 +903,6 @@ paths:
           $ref: '#/components/responses/ErrFailParseRequest'
         '401':
           $ref: '#/components/responses/BearerTokenErrors'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/ErrInternalServer'
-    delete:
-      tags:
-        - Users
-      summary: Delete User
-      description: Deletes a user. Only available to users with admin role.
-      operationId: deleteUser
-      security:
-        - bearerAuth: [ ]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-          example: "01949e48-9f6b-796b-9611-3c9025493233"
-      responses:
-        '204':
-          description: Success - User deleted successfully
-        '400':
-          $ref: '#/components/responses/ErrFailParseRequest'
-        '401':
-          $ref: '#/components/responses/BearerTokenErrors'
-        '403':
-          $ref: '#/components/responses/ErrForbiddenRole'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
