@@ -16,6 +16,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
 	"github.com/nathakusuma/elevateu-backend/pkg/bcrypt"
+	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 	"github.com/nathakusuma/elevateu-backend/pkg/jwt"
 	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"github.com/nathakusuma/elevateu-backend/pkg/mail"
@@ -24,33 +25,35 @@ import (
 )
 
 type authService struct {
-	repo    contract.IAuthRepository
-	userSvc contract.IUserService
-	bcrypt  bcrypt.IBcrypt
-	jwt     jwt.IJwt
-	mailer  mail.IMailer
-	randgen randgen.IRandGen
-	uuid    uuidpkg.IUUID
+	repo     contract.IAuthRepository
+	userSvc  contract.IUserService
+	bcrypt   bcrypt.IBcrypt
+	fileUtil fileutil.IFileUtil
+	jwt      jwt.IJwt
+	mailer   mail.IMailer
+	randgen  randgen.IRandGen
+	uuid     uuidpkg.IUUID
 }
 
-// Update constructor.
 func NewAuthService(
 	authRepo contract.IAuthRepository,
 	userSvc contract.IUserService,
 	bcrypt bcrypt.IBcrypt,
+	fileUtil fileutil.IFileUtil,
 	jwt jwt.IJwt,
 	mailer mail.IMailer,
 	randgen randgen.IRandGen,
 	uuid uuidpkg.IUUID,
 ) contract.IAuthService {
 	return &authService{
-		repo:    authRepo,
-		userSvc: userSvc,
-		bcrypt:  bcrypt,
-		jwt:     jwt,
-		mailer:  mailer,
-		randgen: randgen,
-		uuid:    uuid,
+		repo:     authRepo,
+		userSvc:  userSvc,
+		bcrypt:   bcrypt,
+		fileUtil: fileUtil,
+		jwt:      jwt,
+		mailer:   mailer,
+		randgen:  randgen,
+		uuid:     uuid,
 	}
 }
 
@@ -223,10 +226,19 @@ func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (dto.Logi
 		return dto.LoginResponse{}, err
 	}
 
+	userResp := &dto.UserResponse{}
+	if err2 := userResp.PopulateFromEntity(user, s.fileUtil.GetSignedURL); err2 != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error": err2,
+			"user":  user,
+		}, "[AuthService][Login] failed to populate user response")
+		return dto.LoginResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+	}
+
 	return dto.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		User:         new(dto.UserResponse).PopulateFromEntity(user),
+		User:         userResp,
 	}, nil
 }
 
@@ -255,7 +267,15 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (dto.Log
 		return resp, err
 	}
 
-	userResp := new(dto.UserResponse).PopulateFromEntity(&authSession.User)
+	userResp := &dto.UserResponse{}
+	if err2 := userResp.PopulateFromEntity(&authSession.User, s.fileUtil.GetSignedURL); err2 != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error": err2,
+			"user":  authSession.User,
+		}, "[AuthService][Refresh] failed to populate user response")
+		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
+	}
+
 	resp = dto.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,

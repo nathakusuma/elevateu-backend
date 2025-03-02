@@ -14,7 +14,7 @@ type User struct {
 	Email        string        `db:"email"`
 	PasswordHash string        `db:"password_hash"`
 	Role         enum.UserRole `db:"role"`
-	AvatarURL    *string       `db:"avatar_url"`
+	HasAvatar    bool          `db:"has_avatar"`
 	CreatedAt    time.Time     `db:"created_at"`
 	UpdatedAt    time.Time     `db:"updated_at"`
 

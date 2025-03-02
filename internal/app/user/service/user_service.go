@@ -21,7 +21,7 @@ import (
 )
 
 type userService struct {
-	userRepo contract.IUserRepository
+	repo     contract.IUserRepository
 	bcrypt   bcrypt.IBcrypt
 	fileUtil fileutil.IFileUtil
 	uuid     uuidpkg.IUUID
@@ -34,7 +34,7 @@ func NewUserService(
 	uuid uuidpkg.IUUID,
 ) contract.IUserService {
 	return &userService{
-		userRepo: userRepo,
+		repo:     userRepo,
 		bcrypt:   bcrypt,
 		fileUtil: fileUtil,
 		uuid:     uuid,
@@ -99,7 +99,7 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 		}
 	}
 
-	err = s.userRepo.CreateUser(ctx, user)
+	err = s.repo.CreateUser(ctx, user)
 	if err != nil {
 		// if email already exists
 		if strings.HasPrefix(err.Error(), "conflict email") {
@@ -125,7 +125,7 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 
 func (s *userService) getUserByField(ctx context.Context, field string, value interface{}) (*entity.User, error) {
 	// get from repository
-	user, err := s.userRepo.GetUserByField(ctx, field, value)
+	user, err := s.repo.GetUserByField(ctx, field, value)
 	if err != nil {
 		// if user not found
 		if strings.HasPrefix(err.Error(), "user not found") {
@@ -141,19 +141,6 @@ func (s *userService) getUserByField(ctx context.Context, field string, value in
 		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
-	if user.AvatarURL != nil {
-		avatarURL, err2 := s.fileUtil.GetSignedURL(*user.AvatarURL)
-		if err2 != nil {
-			traceID := log.ErrorWithTraceID(map[string]interface{}{
-				"error": err,
-				"user":  user,
-			}, "[UserService][getUserByField] Failed to get avatar URL")
-			return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
-		}
-
-		user.AvatarURL = &avatarURL
-	}
-
 	return user, nil
 }
 
@@ -161,8 +148,28 @@ func (s *userService) GetUserByEmail(ctx context.Context, email string) (*entity
 	return s.getUserByField(ctx, "email", email)
 }
 
-func (s *userService) GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
-	return s.getUserByField(ctx, "id", id)
+func (s *userService) GetUserByID(ctx context.Context, id uuid.UUID, isMinimal bool) (*dto.UserResponse, error) {
+	user, err := s.getUserByField(ctx, "id", id)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &dto.UserResponse{}
+	if isMinimal {
+		err = resp.PopulateMinimalFromEntity(user, s.fileUtil.GetSignedURL)
+	} else {
+		err = resp.PopulateFromEntity(user, s.fileUtil.GetSignedURL)
+	}
+
+	if err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error": err,
+			"user":  user,
+		}, "[UserService][GetUserByID] Failed to populate user response")
+		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+	}
+
+	return resp, nil
 }
 
 func (s *userService) UpdatePassword(ctx context.Context, email, newPassword string) error {
@@ -187,7 +194,7 @@ func (s *userService) UpdatePassword(ctx context.Context, email, newPassword str
 		PasswordHash: &newPasswordHash,
 	}
 
-	if err = s.userRepo.UpdateUser(ctx, userUpdates); err != nil {
+	if err = s.repo.UpdateUser(ctx, userUpdates); err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":      err,
 			"user.email": email,
@@ -223,16 +230,8 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upda
 		}
 	}
 
-	if req.Avatar != nil {
-		avatarURL, err2 := s.handleAvatarUpload(ctx, req.Avatar, id)
-		if err2 != nil {
-			return err2
-		}
-		userUpdate.AvatarURL = avatarURL
-	}
-
 	// update user
-	if err := s.userRepo.UpdateUser(ctx, userUpdate); err != nil {
+	if err := s.repo.UpdateUser(ctx, userUpdate); err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
 			"updates": userUpdate,
@@ -247,23 +246,61 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upda
 	return nil
 }
 
-func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	requesterID := ctx.Value(ctxkey.UserID)
-	if requesterID == nil {
-		requesterID = "system"
-	}
-
-	// delete user
-	err := s.userRepo.DeleteUser(ctx, id)
+func (s *userService) UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatar *multipart.FileHeader) error {
+	// get user by ID
+	_, err := s.repo.GetUserByField(ctx, "id", id)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "user not found") {
 			return errorpkg.ErrNotFound
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":        err,
-			"user.id":      id,
-			"requester.id": requesterID,
+			"error":   err,
+			"user.id": id,
+		}, "[UserService][UpdateUserAvatar] Failed to get user")
+		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+	}
+
+	// handle avatar upload
+	_, err = s.fileUtil.ValidateAndUploadFile(ctx, avatar, fileutil.ImageContentTypes,
+		fmt.Sprintf("users/avatar/%s", id.String()))
+	if err != nil {
+		return err
+	}
+
+	// update avatar URL
+	hasAvatar := true
+	userUpdate := &dto.UserUpdate{
+		ID:        id,
+		HasAvatar: &hasAvatar,
+	}
+
+	if err = s.repo.UpdateUser(ctx, userUpdate); err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":   err,
+			"updates": userUpdate,
+		}, "[UserService][UpdateUserAvatar] Failed to update user avatar")
+		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+	}
+
+	log.Info(map[string]interface{}{
+		"user.id": id,
+	}, "[UserService][UpdateUserAvatar] Avatar updated")
+
+	return nil
+}
+
+func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	// delete user
+	err := s.repo.DeleteUser(ctx, id)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "user not found") {
+			return errorpkg.ErrNotFound
+		}
+
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":   err,
+			"user.id": id,
 		}, "[UserService][DeleteUser] Failed to delete user")
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
@@ -271,61 +308,57 @@ func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	// delete avatar
 	err = s.fileUtil.Delete(ctx, fmt.Sprintf("users/avatar/%s", id.String()))
 	if err != nil {
+		if strings.Contains(err.Error(), "object doesn't exist") {
+			goto pass
+		}
+
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":        err,
-			"user.id":      id,
-			"requester.id": requesterID,
+			"error":   err,
+			"user.id": id,
 		}, "[UserService][DeleteUser] Failed to delete avatar")
 		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
+pass:
 	log.Info(map[string]interface{}{
-		"user.id":      id,
-		"requester.id": requesterID,
+		"user.id": id,
 	}, "[UserService][DeleteUser] User deleted")
 
 	return nil
 }
 
-func (s *userService) handleAvatarUpload(ctx context.Context, avatar *multipart.FileHeader,
-	userID uuid.UUID) (*string, error) {
-	file, err := avatar.Open()
-	if err != nil {
+func (s *userService) DeleteUserAvatar(ctx context.Context, id uuid.UUID) error {
+	// delete avatar
+	if err := s.fileUtil.Delete(ctx, fmt.Sprintf("users/avatar/%s", id.String())); err != nil {
+		if strings.Contains(err.Error(), "object doesn't exist") {
+			return errorpkg.ErrNotFound
+		}
+
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
-			"user.id": userID,
-		}, "[UserService][handleAvatarUpload] Failed to open avatar file")
-		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
-	}
-	defer file.Close()
-
-	if avatar.Size > 2*fileutil.MegaByte {
-		return nil, errorpkg.ErrFileTooLarge.WithDetail(
-			fmt.Sprintf("File size is too large (%s). Please upload a file less than 2MB",
-				fileutil.ByteToAppropriateUnit(avatar.Size)))
+			"user.id": id,
+		}, "[UserService][DeleteUserAvatar] Failed to delete avatar")
+		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
-	ok, fileType, err := s.fileUtil.CheckMIMEFileType(file, fileutil.ImageContentTypes)
-	if err != nil {
+	// update avatar URL
+	hasAvatar := false
+	userUpdate := &dto.UserUpdate{
+		ID:        id,
+		HasAvatar: &hasAvatar,
+	}
+
+	if err := s.repo.UpdateUser(ctx, userUpdate); err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
-			"user.id": userID,
-		}, "[UserService][handleAvatarUpload] Failed to check MIME file type")
-		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
-	}
-	if !ok {
-		return nil, errorpkg.ErrInvalidFileFormat.WithDetail(
-			fmt.Sprintf("File type %s is not allowed. Please upload a valid image file", fileType))
+			"updates": userUpdate,
+		}, "[UserService][DeleteUserAvatar] Failed to update user avatar")
+		return errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
-	avatarURL, err := s.fileUtil.Upload(ctx, file, fmt.Sprintf("users/avatar/%s", userID.String()))
-	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"user.id": userID,
-		}, "[UserService][handleAvatarUpload] Failed to upload avatar")
-		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
-	}
+	log.Info(map[string]interface{}{
+		"user.id": id,
+	}, "[UserService][DeleteUserAvatar] Avatar deleted")
 
-	return &avatarURL, nil
+	return nil
 }

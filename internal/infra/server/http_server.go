@@ -111,7 +111,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, rds *redis.Client) {
 	courseRepository := courserepo.NewCourseRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
-	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, jwtAccess, mailer,
+	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, fileUtil, jwtAccess, mailer,
 		randomGenerator, uuidInstance)
 	midtransService := paymentsvc.NewMidtransService()
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)

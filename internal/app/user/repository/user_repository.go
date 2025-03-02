@@ -66,9 +66,9 @@ func (r *userRepository) createUser(ctx context.Context, tx sqlx.ExtContext, use
 		ctx,
 		tx,
 		`INSERT INTO users (
-			id, name, email, password_hash, role, avatar_url
+			id, name, email, password_hash, role
 		) VALUES (
-			:id, :name, :email, :password_hash, :role, :avatar_url
+			:id, :name, :email, :password_hash, :role
 		)`,
 		user,
 	)
@@ -130,7 +130,7 @@ func (r *userRepository) getUserByCondition(ctx context.Context, whereClause str
 		email,
 		password_hash,
 		role,
-		avatar_url,
+		has_avatar,
 		created_at,
 		updated_at
 	FROM users
@@ -266,9 +266,9 @@ func (r *userRepository) updateUserDynamic(ctx context.Context, tx sqlx.ExtConte
 		argIndex++
 	}
 
-	if req.AvatarURL != nil {
-		updates = append(updates, fmt.Sprintf("avatar_url = $%d", argIndex))
-		args = append(args, *req.AvatarURL)
+	if req.HasAvatar != nil {
+		updates = append(updates, fmt.Sprintf("has_avatar = $%d", argIndex))
+		args = append(args, *req.HasAvatar)
 		argIndex++
 	}
 

@@ -2,11 +2,9 @@ package fileutil
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -41,30 +39,8 @@ func (u *fileUtil) GetFullURL(path string) string {
 	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucket, path)
 }
 
-func (u *fileUtil) GetSignedURL(originalURL string) (string, error) {
+func (u *fileUtil) GetSignedURL(path string) (string, error) {
 	bucket := env.GetEnv().GCPStorageBucketName
-	expectedPrefix := "https://storage.googleapis.com/" + bucket + "/"
-
-	// Validate URL format
-	if !strings.HasPrefix(originalURL, expectedPrefix) {
-		return "", fmt.Errorf("invalid URL format: must start with %s", expectedPrefix)
-	}
-
-	// Extract and validate path
-	path := originalURL[len(expectedPrefix):]
-	if path == "" {
-		return "", errors.New("empty path is not allowed")
-	}
-
-	// Check for path traversal attempts
-	if strings.Contains(path, "..") {
-		return "", errors.New("path traversal attempts are not allowed")
-	}
-
-	// Validate path characters
-	if !IsValidPath(path) {
-		return "", errors.New("path contains invalid characters")
-	}
 
 	url, err := u.client.Bucket(bucket).SignedURL(path, &storage.SignedURLOptions{
 		Method:  http.MethodGet,

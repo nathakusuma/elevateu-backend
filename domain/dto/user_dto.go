@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"mime/multipart"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,14 +34,26 @@ type MentorData struct {
 	Price          int     `json:"price,omitempty"`
 }
 
-func (u *UserResponse) PopulateFromEntity(user *entity.User) *UserResponse {
+func (u *UserResponse) PopulateFromEntity(user *entity.User,
+	urlSigner func(string) (string, error)) error {
 	u.ID = user.ID
 	u.Name = user.Name
 	u.Email = user.Email
 	u.Role = user.Role
-	u.AvatarURL = user.AvatarURL
 	u.CreatedAt = &user.CreatedAt
 	u.UpdatedAt = &user.UpdatedAt
+
+	var avatarURL string
+	var err error
+	if user.HasAvatar {
+		avatarURL, err = urlSigner("users/avatar/" + user.ID.String())
+	} else {
+		avatarURL, err = urlSigner("users/avatar/default")
+	}
+	if err != nil {
+		return err
+	}
+	u.AvatarURL = &avatarURL
 
 	// Add role-specific data
 	if user.Student != nil {
@@ -62,15 +73,24 @@ func (u *UserResponse) PopulateFromEntity(user *entity.User) *UserResponse {
 		}
 	}
 
-	return u
+	return nil
 }
 
-func (u *UserResponse) PopulateMinimalFromEntity(user *entity.User) *UserResponse {
+func (u *UserResponse) PopulateMinimalFromEntity(user *entity.User,
+	urlSigner func(string) (string, error)) error {
 	u.ID = user.ID
 	u.Name = user.Name
 	u.Role = user.Role
-	u.AvatarURL = user.AvatarURL
 
+	if user.HasAvatar {
+		avatarURL, err := urlSigner("users/avatar/" + user.ID.String())
+		if err != nil {
+			return err
+		}
+		u.AvatarURL = &avatarURL
+	}
+
+	// Add role-specific data
 	if user.Student != nil {
 		u.Student = &StudentData{
 			Instance: user.Student.Instance,
@@ -88,7 +108,7 @@ func (u *UserResponse) PopulateMinimalFromEntity(user *entity.User) *UserRespons
 		}
 	}
 
-	return u
+	return nil
 }
 
 type UserUpdate struct {
@@ -96,7 +116,7 @@ type UserUpdate struct {
 	Name         *string   `db:"name"`
 	Email        *string   `db:"email"`
 	PasswordHash *string   `db:"password_hash"`
-	AvatarURL    *string   `db:"avatar_url"`
+	HasAvatar    *bool     `db:"has_avatar"`
 
 	Student *StudentUpdate `db:"student"`
 	Mentor  *MentorUpdate  `db:"mentor"`
@@ -113,28 +133,6 @@ type MentorUpdate struct {
 	Price          *int    `db:"price"`
 }
 
-type CreateStudentRequest struct {
-	Instance string `json:"instance" validate:"required,min=1,max=50"`
-	Major    string `form:"major" json:"major" validate:"required,min=1,max=50"`
-}
-
-type UpdateStudentRequest struct {
-	Instance *string `form:"instance" json:"instance" validate:"omitempty,min=1,max=50"`
-	Major    *string `form:"major" json:"major" validate:"omitempty,min=1,max=50"`
-}
-
-type CreateMentorRequest struct {
-	Specialization string `json:"specialization" validate:"required,min=1,max=255"`
-	Experience     string `form:"experience" json:"experience" validate:"required,min=1,max=1000"`
-	Price          int    `form:"price" json:"price" validate:"required,min=0"`
-}
-
-type UpdateMentorRequest struct {
-	Specialization *string `form:"specialization" json:"specialization" validate:"omitempty,min=1,max=255"`
-	Experience     *string `form:"experience" json:"experience" validate:"omitempty,min=1,max=1000"`
-	Price          *int    `form:"price" json:"price" validate:"omitempty,min=0"`
-}
-
 type CreateUserRequest struct {
 	Name     string                `json:"name"`
 	Email    string                `json:"email"`
@@ -144,9 +142,30 @@ type CreateUserRequest struct {
 	Mentor   *CreateMentorRequest  `json:"mentor,omitempty"`
 }
 
+type CreateStudentRequest struct {
+	Instance string `json:"instance" validate:"required,min=1,max=50"`
+	Major    string `json:"major" validate:"required,min=1,max=50"`
+}
+
+type CreateMentorRequest struct {
+	Specialization string `json:"specialization" validate:"required,min=1,max=255"`
+	Experience     string `json:"experience" validate:"required,min=1,max=1000"`
+	Price          int    `json:"price" validate:"required,min=0"`
+}
+
 type UpdateUserRequest struct {
-	Name    *string               `form:"name" validate:"omitempty,min=3,max=60"`
-	Avatar  *multipart.FileHeader `form:"avatar"`
-	Student *UpdateStudentRequest `form:"student" json:"student,omitempty"`
-	Mentor  *UpdateMentorRequest  `form:"mentor" json:"mentor,omitempty"`
+	Name    *string               `json:"name" validate:"omitempty,min=3,max=60"`
+	Student *UpdateStudentRequest `json:"student,omitempty"`
+	Mentor  *UpdateMentorRequest  `json:"mentor,omitempty"`
+}
+
+type UpdateStudentRequest struct {
+	Instance *string `json:"instance" validate:"omitempty,min=1,max=50"`
+	Major    *string `json:"major" validate:"omitempty,min=1,max=50"`
+}
+
+type UpdateMentorRequest struct {
+	Specialization *string `json:"specialization" validate:"omitempty,min=1,max=255"`
+	Experience     *string `json:"experience" validate:"omitempty,min=1,max=1000"`
+	Price          *int    `json:"price" validate:"omitempty,min=0"`
 }
