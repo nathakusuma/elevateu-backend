@@ -45,13 +45,13 @@ func (s *courseService) CreateCourse(ctx context.Context,
 		return dto.CreateCourseResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
 	}
 
-	teacherAvatarURL, err := s.fileUtil.ValidateAndUploadFile(ctx, req.TeacherAvatar, fileutil.ImageContentTypes,
+	_, err = s.fileUtil.ValidateAndUploadFile(ctx, req.TeacherAvatar, fileutil.ImageContentTypes,
 		fmt.Sprintf("courses/teacher_avatar/%s", courseID))
 	if err != nil {
 		return dto.CreateCourseResponse{}, err
 	}
 
-	thumbnailURL, err := s.fileUtil.ValidateAndUploadFile(ctx, req.Thumbnail, fileutil.ImageContentTypes,
+	_, err = s.fileUtil.ValidateAndUploadFile(ctx, req.Thumbnail, fileutil.ImageContentTypes,
 		fmt.Sprintf("courses/thumbnail/%s", courseID))
 	if err != nil {
 		return dto.CreateCourseResponse{}, err
@@ -68,14 +68,11 @@ func (s *courseService) CreateCourse(ctx context.Context,
 	}
 
 	course := &entity.Course{
-		ID:               courseID,
-		CategoryID:       req.CategoryID,
-		Title:            req.Title,
-		Description:      req.Description,
-		TeacherName:      req.TeacherName,
-		TeacherAvatarURL: teacherAvatarURL,
-		ThumbnailURL:     thumbnailURL,
-		PreviewVideoURL:  s.fileUtil.GetFullURL(previewVideoPath),
+		ID:          courseID,
+		CategoryID:  req.CategoryID,
+		Title:       req.Title,
+		Description: req.Description,
+		TeacherName: req.TeacherName,
 	}
 
 	// Create course
@@ -194,21 +191,19 @@ func (s *courseService) UpdateCourse(ctx context.Context, id uuid.UUID, req *dto
 	}
 
 	if req.TeacherAvatar != nil {
-		teacherAvatarURL, err := s.fileUtil.ValidateAndUploadFile(ctx, req.TeacherAvatar, fileutil.ImageContentTypes,
+		_, err := s.fileUtil.ValidateAndUploadFile(ctx, req.TeacherAvatar, fileutil.ImageContentTypes,
 			fmt.Sprintf("courses/teacher_avatar/%s", id))
 		if err != nil {
 			return err
 		}
-		updates.TeacherAvatarURL = &teacherAvatarURL
 	}
 
 	if req.Thumbnail != nil {
-		thumbnailURL, err := s.fileUtil.ValidateAndUploadFile(ctx, req.Thumbnail, fileutil.ImageContentTypes,
+		_, err := s.fileUtil.ValidateAndUploadFile(ctx, req.Thumbnail, fileutil.ImageContentTypes,
 			fmt.Sprintf("courses/thumbnail/%s", id))
 		if err != nil {
 			return err
 		}
-		updates.ThumbnailURL = &thumbnailURL
 	}
 
 	err = tx.Commit()

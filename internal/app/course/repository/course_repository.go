@@ -33,11 +33,9 @@ func (r *courseRepository) BeginTx() (*sqlx.Tx, error) {
 func (r *courseRepository) CreateCourse(ctx context.Context, course *entity.Course) error {
 	query := `
 		INSERT INTO courses (
-			id, category_id, title, description, teacher_name,
-			teacher_avatar_url, thumbnail_url, preview_video_url
+			id, category_id, title, description, teacher_name
 		) VALUES (
-			:id, :category_id, :title, :description, :teacher_name,
-			:teacher_avatar_url, :thumbnail_url, :preview_video_url
+			:id, :category_id, :title, :description, :teacher_name
 		)
 	`
 
@@ -58,8 +56,8 @@ func (r *courseRepository) GetCourseByID(ctx context.Context, id uuid.UUID) (*en
 	query := `
 		SELECT
 			c.id, c.category_id, c.title, c.description, c.teacher_name,
-			c.teacher_avatar_url, c.thumbnail_url, c.preview_video_url, c.rating, c.rating_count,
-			c.total_rating, c.enrollment_count, c.content_count, c.created_at, c.updated_at,
+			c.rating, c.rating_count, c.total_rating, c.enrollment_count,
+			c.content_count, c.created_at, c.updated_at,
 			cat.id AS "category.id", cat.name AS "category.name"
 		FROM courses c
 		LEFT JOIN categories cat ON c.category_id = cat.id
@@ -87,8 +85,8 @@ func (r *courseRepository) GetCourses(ctx context.Context, query dto.GetCoursesQ
 	baseQuery := `
 		SELECT
 			c.id, c.category_id, c.title, c.description, c.teacher_name,
-			c.teacher_avatar_url, c.thumbnail_url, c.preview_video_url, c.rating, c.rating_count,
-			c.total_rating, c.enrollment_count, c.content_count, c.created_at, c.updated_at,
+			c.rating, c.rating_count, c.total_rating, c.enrollment_count,
+			c.content_count, c.created_at, c.updated_at,
 			cat.id AS "category.id", cat.name AS "category.name"
 		FROM courses c
 		LEFT JOIN categories cat ON c.category_id = cat.id
@@ -240,24 +238,6 @@ func (r *courseRepository) UpdateCourse(ctx context.Context, tx sqlx.ExtContext,
 	if updates.TeacherName != nil {
 		query += fmt.Sprintf(", teacher_name = $%d", argIndex)
 		args = append(args, *updates.TeacherName)
-		argIndex++
-	}
-
-	if updates.TeacherAvatarURL != nil {
-		query += fmt.Sprintf(", teacher_avatar_url = $%d", argIndex)
-		args = append(args, *updates.TeacherAvatarURL)
-		argIndex++
-	}
-
-	if updates.ThumbnailURL != nil {
-		query += fmt.Sprintf(", thumbnail_url = $%d", argIndex)
-		args = append(args, *updates.ThumbnailURL)
-		argIndex++
-	}
-
-	if updates.PreviewVideoURL != nil {
-		query += fmt.Sprintf(", preview_video_url = $%d", argIndex)
-		args = append(args, *updates.PreviewVideoURL)
 		argIndex++
 	}
 

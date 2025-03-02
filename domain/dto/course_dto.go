@@ -78,14 +78,11 @@ type GetCoursesQuery struct {
 }
 
 type CourseUpdate struct {
-	ID               uuid.UUID  `db:"id"`
-	CategoryID       *uuid.UUID `db:"category_id"`
-	Title            *string    `db:"title"`
-	Description      *string    `db:"description"`
-	TeacherName      *string    `db:"teacher_name"`
-	TeacherAvatarURL *string    `db:"teacher_avatar_url"`
-	ThumbnailURL     *string    `db:"thumbnail_url"`
-	PreviewVideoURL  *string    `db:"preview_video_url"`
+	ID          uuid.UUID  `db:"id"`
+	CategoryID  *uuid.UUID `db:"category_id"`
+	Title       *string    `db:"title"`
+	Description *string    `db:"description"`
+	TeacherName *string    `db:"teacher_name"`
 }
 
 type UpdateCourseRequest struct {
