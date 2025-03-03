@@ -18,10 +18,10 @@ type CourseResponse struct {
 	TeacherAvatarURL string    `json:"teacher_avatar_url,omitempty"`
 	ThumbnailURL     string    `json:"thumbnail_url,omitempty"`
 	PreviewVideoURL  string    `json:"preview_video_url,omitempty"`
-	Rating           float64   `json:"rating,omitempty"`
-	RatingCount      int64     `json:"rating_count,omitempty"`
-	EnrollmentCount  int64     `json:"enrollment_count,omitempty"`
-	ContentCount     int       `json:"content_count,omitempty"`
+	Rating           *float64  `json:"rating,omitempty"`
+	RatingCount      *int64    `json:"rating_count,omitempty"`
+	EnrollmentCount  *int64    `json:"enrollment_count,omitempty"`
+	ContentCount     *int      `json:"content_count,omitempty"`
 }
 
 func (c *CourseResponse) PopulateFromEntity(course *entity.Course,
@@ -49,11 +49,11 @@ func (c *CourseResponse) PopulateFromEntity(course *entity.Course,
 	c.ID = course.ID
 	c.Title = course.Title
 	c.Description = course.Description
-	c.Rating = course.Rating
-	c.RatingCount = course.RatingCount
+	c.Rating = &course.Rating
+	c.RatingCount = &course.RatingCount
 	c.TeacherName = course.TeacherName
-	c.EnrollmentCount = course.EnrollmentCount
-	c.ContentCount = course.ContentCount
+	c.EnrollmentCount = &course.EnrollmentCount
+	c.ContentCount = &course.ContentCount
 
 	return nil
 }
