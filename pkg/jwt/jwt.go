@@ -10,13 +10,15 @@ import (
 )
 
 type IJwt interface {
-	Create(userID uuid.UUID, role enum.UserRole) (string, error)
+	Create(userID uuid.UUID, role enum.UserRole, isSubscribedBoost, isSubscribedChallenge bool) (string, error)
 	Decode(tokenString string, claims *Claims) error
 }
 
 type Claims struct {
 	jwt.RegisteredClaims
-	Role enum.UserRole `json:"role"`
+	Role                  enum.UserRole `json:"role"`
+	IsSubscribedBoost     bool          `json:"is_subscribed_boost"`
+	IsSubscribedChallenge bool          `json:"is_subscribed_challenge"`
 }
 
 type jwtStruct struct {
@@ -31,7 +33,8 @@ func NewJwt(exp time.Duration, secret []byte) IJwt {
 	}
 }
 
-func (j *jwtStruct) Create(userID uuid.UUID, role enum.UserRole) (string, error) {
+func (j *jwtStruct) Create(userID uuid.UUID, role enum.UserRole, isSubscribedBoost,
+	isSubscribedChallenge bool) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "elevateu-backend",
@@ -39,7 +42,9 @@ func (j *jwtStruct) Create(userID uuid.UUID, role enum.UserRole) (string, error)
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.exp)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		Role: role,
+		Role:                  role,
+		IsSubscribedBoost:     isSubscribedBoost,
+		IsSubscribedChallenge: isSubscribedChallenge,
 	}
 
 	unsignedJWT := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

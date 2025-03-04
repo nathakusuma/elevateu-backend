@@ -42,6 +42,8 @@ func (m *Middleware) RequireAuthenticated(ctx *fiber.Ctx) error {
 
 	ctx.Locals(ctxkey.UserID, uuid.MustParse(claims.Subject))
 	ctx.Locals(ctxkey.UserRole, claims.Role)
+	ctx.Locals(ctxkey.IsSubscribedBoost, claims.IsSubscribedBoost)
+	ctx.Locals(ctxkey.IsSubscribedChallenge, claims.IsSubscribedChallenge)
 
 	return ctx.Next()
 }

@@ -22,8 +22,11 @@ type UserResponse struct {
 }
 
 type StudentData struct {
-	Instance string `json:"instance,omitempty"`
-	Major    string `json:"major,omitempty"`
+	Instance                 string     `json:"instance,omitempty"`
+	Major                    string     `json:"major,omitempty"`
+	Point                    *int       `json:"point,omitempty"`
+	SubscribedBoostUntil     *time.Time `json:"subscribed_boost_until,omitempty"`
+	SubscribedChallengeUntil *time.Time `json:"subscribed_challenge_until,omitempty"`
 }
 
 type MentorData struct {
@@ -60,6 +63,13 @@ func (u *UserResponse) PopulateFromEntity(user *entity.User,
 		u.Student = &StudentData{
 			Instance: user.Student.Instance,
 			Major:    user.Student.Major,
+			Point:    &user.Student.Point,
+		}
+		if !user.Student.SubscribedBoostUntil.IsZero() {
+			u.Student.SubscribedBoostUntil = &user.Student.SubscribedBoostUntil
+		}
+		if !user.Student.SubscribedChallengeUntil.IsZero() {
+			u.Student.SubscribedChallengeUntil = &user.Student.SubscribedChallengeUntil
 		}
 	}
 

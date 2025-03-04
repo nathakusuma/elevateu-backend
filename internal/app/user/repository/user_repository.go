@@ -136,6 +136,9 @@ func (r *userRepository) getUserByCondition(ctx context.Context, whereClause str
 		u.updated_at,
 		s.instance,
 		s.major,
+		s.point,
+		s.subscribed_boost_until,
+		s.subscribed_challenge_until,
 		m.specialization,
 		m.experience,
 		m.rating,
@@ -162,23 +165,26 @@ func (r *userRepository) getUserByCondition(ctx context.Context, whereClause str
 
 	// Struct to scan all fields
 	type UserJoin struct {
-		ID             uuid.UUID       `db:"id"`
-		Name           string          `db:"name"`
-		Email          string          `db:"email"`
-		PasswordHash   string          `db:"password_hash"`
-		Role           enum.UserRole   `db:"role"`
-		HasAvatar      bool            `db:"has_avatar"`
-		CreatedAt      time.Time       `db:"created_at"`
-		UpdatedAt      time.Time       `db:"updated_at"`
-		Instance       sql.NullString  `db:"instance"`
-		Major          sql.NullString  `db:"major"`
-		Specialization sql.NullString  `db:"specialization"`
-		Experience     sql.NullString  `db:"experience"`
-		Rating         sql.NullFloat64 `db:"rating"`
-		RatingCount    sql.NullInt64   `db:"rating_count"`
-		RatingTotal    sql.NullFloat64 `db:"rating_total"`
-		Price          sql.NullInt64   `db:"price"`
-		Balance        sql.NullInt64   `db:"balance"`
+		ID                       uuid.UUID       `db:"id"`
+		Name                     string          `db:"name"`
+		Email                    string          `db:"email"`
+		PasswordHash             string          `db:"password_hash"`
+		Role                     enum.UserRole   `db:"role"`
+		HasAvatar                bool            `db:"has_avatar"`
+		CreatedAt                time.Time       `db:"created_at"`
+		UpdatedAt                time.Time       `db:"updated_at"`
+		Instance                 sql.NullString  `db:"instance"`
+		Major                    sql.NullString  `db:"major"`
+		Point                    sql.NullInt64   `db:"point"`
+		SubscribedBoostUntil     sql.NullTime    `db:"subscribed_boost_until"`
+		SubscribedChallengeUntil sql.NullTime    `db:"subscribed_challenge_until"`
+		Specialization           sql.NullString  `db:"specialization"`
+		Experience               sql.NullString  `db:"experience"`
+		Rating                   sql.NullFloat64 `db:"rating"`
+		RatingCount              sql.NullInt64   `db:"rating_count"`
+		RatingTotal              sql.NullFloat64 `db:"rating_total"`
+		Price                    sql.NullInt64   `db:"price"`
+		Balance                  sql.NullInt64   `db:"balance"`
 	}
 
 	var userJoin UserJoin
@@ -199,8 +205,11 @@ func (r *userRepository) getUserByCondition(ctx context.Context, whereClause str
 
 	if user.Role == enum.UserRoleStudent && userJoin.Instance.Valid {
 		user.Student = &entity.Student{
-			Instance: userJoin.Instance.String,
-			Major:    userJoin.Major.String,
+			Instance:                 userJoin.Instance.String,
+			Major:                    userJoin.Major.String,
+			Point:                    int(userJoin.Point.Int64),
+			SubscribedBoostUntil:     userJoin.SubscribedBoostUntil.Time,
+			SubscribedChallengeUntil: userJoin.SubscribedChallengeUntil.Time,
 		}
 	}
 

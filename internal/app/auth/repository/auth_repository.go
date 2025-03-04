@@ -58,6 +58,9 @@ func (r *authRepository) GetAuthSessionByToken(ctx context.Context, token string
         u.updated_at as user_updated_at,
         st.instance,
         st.major,
+        st.point,
+        st.subscribed_boost_until,
+        st.subscribed_challenge_until,
         m.specialization,
         m.experience,
         m.rating,
@@ -100,8 +103,11 @@ func (r *authRepository) GetAuthSessionByToken(ctx context.Context, token string
 		UserUpdatedAt time.Time     `db:"user_updated_at"`
 
 		// Student fields
-		Instance sql.NullString `db:"instance"`
-		Major    sql.NullString `db:"major"`
+		Instance                 sql.NullString `db:"instance"`
+		Major                    sql.NullString `db:"major"`
+		Point                    sql.NullInt64  `db:"point"`
+		SubscribedBoostUntil     sql.NullTime   `db:"subscribed_boost_until"`
+		SubscribedChallengeUntil sql.NullTime   `db:"subscribed_challenge_until"`
 
 		// Mentor fields
 		Specialization sql.NullString  `db:"specialization"`

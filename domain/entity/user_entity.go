@@ -23,8 +23,11 @@ type User struct {
 }
 
 type Student struct {
-	Instance string `db:"instance"`
-	Major    string `db:"major"`
+	Instance                 string    `db:"instance"`
+	Major                    string    `db:"major"`
+	Point                    int       `db:"point"`
+	SubscribedBoostUntil     time.Time `db:"subscribed_boost_until"`
+	SubscribedChallengeUntil time.Time `db:"subscribed_challenge_until"`
 }
 
 type Mentor struct {

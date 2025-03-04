@@ -221,7 +221,7 @@ func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (dto.Logi
 	}
 
 	// Generate tokens
-	accessToken, refreshToken, err := s.generateTokens(ctx, user.ID, user.Role)
+	accessToken, refreshToken, err := s.generateTokens(ctx, user)
 	if err != nil {
 		return dto.LoginResponse{}, err
 	}
@@ -262,7 +262,7 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (dto.Log
 	}
 
 	// rotate refresh token
-	accessToken, refreshToken, err := s.generateTokens(ctx, authSession.User.ID, authSession.User.Role)
+	accessToken, refreshToken, err := s.generateTokens(ctx, &authSession.User)
 	if err != nil {
 		return resp, err
 	}
@@ -421,15 +421,19 @@ func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRe
 	})
 }
 
-func (s *authService) generateTokens(ctx context.Context, userID uuid.UUID,
-	userRole enum.UserRole,
-) (string, string, error) {
+func (s *authService) generateTokens(ctx context.Context, user *entity.User) (string, string, error) {
 	// Generate access token
-	accessToken, err := s.jwt.Create(userID, userRole)
+	var isSubscribedBoost, isSubscribedChallenge bool
+	if user.Role == enum.UserRoleStudent && user.Student != nil {
+		isSubscribedBoost = user.Student.SubscribedBoostUntil.After(time.Now())
+		isSubscribedChallenge = user.Student.SubscribedChallengeUntil.After(time.Now())
+	}
+
+	accessToken, err := s.jwt.Create(user.ID, user.Role, isSubscribedBoost, isSubscribedChallenge)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
-			"user.id": userID,
+			"user.id": user.ID,
 		}, "[AuthService][generateTokens] Failed to generate access token")
 		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
@@ -439,7 +443,7 @@ func (s *authService) generateTokens(ctx context.Context, userID uuid.UUID,
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
-			"user.id": userID,
+			"user.id": user.ID,
 		}, "[AuthService][generateTokens] Failed to generate refresh token")
 		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
@@ -447,12 +451,12 @@ func (s *authService) generateTokens(ctx context.Context, userID uuid.UUID,
 	// Create auth session
 	if err = s.repo.CreateAuthSession(ctx, &entity.AuthSession{
 		Token:     refreshToken,
-		UserID:    userID,
+		UserID:    user.ID,
 		ExpiresAt: time.Now().Add(env.GetEnv().JwtRefreshExpireDuration),
 	}); err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
-			"user.id": userID,
+			"user.id": user.ID,
 		}, "[AuthService][generateTokens] Failed to store auth session")
 		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
