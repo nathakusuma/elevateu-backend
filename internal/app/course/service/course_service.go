@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"strings"
 
 	"github.com/google/uuid"
@@ -294,4 +295,62 @@ func (s *courseService) GetPreviewVideoUploadURL(_ context.Context, id uuid.UUID
 	}
 
 	return url, nil
+}
+
+func (s *courseService) CreateEnrollment(ctx context.Context, courseID, studentID uuid.UUID) error {
+	isSubscribedBoost, ok := ctx.Value(ctxkey.IsSubscribedBoost).(bool)
+	if !ok || !isSubscribedBoost {
+		return errorpkg.ErrForbiddenUser.WithDetail("You are not subscribed to Skill Boost")
+	}
+
+	err := s.repo.CreateEnrollment(ctx, courseID, studentID)
+	if err != nil {
+		if err.Error() == "course not found" {
+			return errorpkg.ErrValidation.Build().WithDetail("Course not found")
+		}
+		if err.Error() == "student already enrolled in course" {
+			return errorpkg.ErrStudentAlreadyEnrolled
+		}
+
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":      err,
+			"course.id":  courseID,
+			"student.id": studentID,
+		}, "[CourseEnrollmentService][CreateEnrollment] Failed to create enrollment")
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+	}
+
+	log.Info(map[string]interface{}{
+		"course.id":  courseID,
+		"student.id": studentID,
+	}, "[CourseEnrollmentService][CreateEnrollment] Successfully created enrollment")
+
+	return nil
+}
+
+func (s *courseService) GetEnrolledCourses(ctx context.Context, studentID uuid.UUID,
+	pageReq dto.PaginationRequest) ([]*dto.CourseResponse, dto.PaginationResponse, error) {
+	courses, pageResp, err := s.repo.GetEnrolledCourses(ctx, studentID, pageReq)
+	if err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error": err,
+			"page":  pageReq,
+		}, "[CourseEnrollmentService][GetEnrolledCourses] Failed to get enrolled courses")
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+	}
+
+	resp := make([]*dto.CourseResponse, len(courses))
+	for i, course := range courses {
+		resp[i] = &dto.CourseResponse{}
+		err = resp[i].PopulateFromEntity(course, s.fileUtil.GetSignedURL)
+		if err != nil {
+			traceID := log.ErrorWithTraceID(map[string]interface{}{
+				"error":  err,
+				"course": course,
+			}, "[CourseEnrollmentService][GetEnrolledCourses] Failed to populate course response from entity")
+			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		}
+	}
+
+	return resp, pageResp, nil
 }

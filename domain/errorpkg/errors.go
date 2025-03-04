@@ -71,3 +71,10 @@ var (
 		"category-name-exists",
 		"Category name already exists. Please use another name.")
 )
+
+// Courses
+var (
+	ErrStudentAlreadyEnrolled = NewError(http.StatusConflict,
+		"student-already-enrolled",
+		"You have already enrolled in this course.")
+)

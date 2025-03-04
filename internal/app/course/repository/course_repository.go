@@ -272,3 +272,138 @@ func (r *courseRepository) DeleteCourse(ctx context.Context, tx sqlx.ExtContext,
 
 	return nil
 }
+
+func (r *courseRepository) CreateEnrollment(ctx context.Context, courseID, studentID uuid.UUID) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	query := `INSERT INTO course_enrollments (course_id, student_id)
+				VALUES ($1, $2)`
+
+	_, err = tx.ExecContext(ctx, query, courseID, studentID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.ConstraintName {
+			case "course_enrollments_course_id_fkey":
+				return errors.New("course not found")
+			case "course_enrollments_pkey":
+				return errors.New("student already enrolled in course")
+			}
+		}
+
+		return err
+	}
+
+	// update enrollment count
+	query = `UPDATE courses SET enrollment_count = enrollment_count + 1 WHERE id = $1`
+	_, err = tx.ExecContext(ctx, query, courseID)
+	if err != nil {
+		return fmt.Errorf("failed to update enrollment count: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (r *courseRepository) GetEnrolledCourses(ctx context.Context, studentID uuid.UUID,
+	pageReq dto.PaginationRequest) ([]*entity.Course, dto.PaginationResponse, error) {
+	baseQuery := `
+		SELECT
+			c.id, c.category_id, c.title, c.description, c.teacher_name,
+			c.rating, c.rating_count, c.total_rating, c.enrollment_count,
+			c.content_count, c.total_duration, c.created_at, c.updated_at,
+			cat.id AS "category.id", cat.name AS "category.name"
+		FROM courses c
+		LEFT JOIN categories cat ON c.category_id = cat.id
+		JOIN course_enrollments ce ON c.id = ce.course_id
+		WHERE ce.student_id = $1
+		ORDER BY ce.last_accessed_at DESC
+	`
+
+	// cursor-based pagination
+	if pageReq.Cursor != uuid.Nil {
+		var operator string
+		var orderDirection string
+
+		if pageReq.Direction == "next" {
+			operator = ">"
+			orderDirection = "ASC"
+		} else {
+			operator = "<"
+			orderDirection = "DESC"
+		}
+
+		sqlQuery := baseQuery + fmt.Sprintf(" AND c.id %s $2 ORDER BY c.id %s LIMIT $3", operator, orderDirection)
+
+		rows, err := r.db.QueryxContext(ctx, sqlQuery, studentID, pageReq.Cursor, pageReq.Limit+1)
+		if err != nil {
+			return nil, dto.PaginationResponse{}, err
+		}
+		defer rows.Close()
+
+		// Process results
+		var courses []*entity.Course
+		for rows.Next() {
+			var course entity.Course
+			course.Category = &entity.Category{}
+
+			if err := rows.StructScan(&course); err != nil {
+				return nil, dto.PaginationResponse{}, err
+			}
+			courses = append(courses, &course)
+		}
+
+		// hasMore
+		hasMore := false
+		if len(courses) > pageReq.Limit {
+			hasMore = true
+			courses = courses[:pageReq.Limit]
+		}
+
+		// Reverse when "prev"
+		if pageReq.Direction == "prev" {
+			for i, j := 0, len(courses)-1; i < j; i, j = i+1, j-1 {
+				courses[i], courses[j] = courses[j], courses[i]
+			}
+		}
+
+		return courses, dto.PaginationResponse{HasMore: hasMore}, nil
+	} else {
+		// When no cursor is provided, use only LIMIT
+		sqlQuery := baseQuery + " ORDER BY c.id ASC LIMIT $2"
+
+		rows, err := r.db.QueryxContext(ctx, sqlQuery, studentID, pageReq.Limit+1)
+		if err != nil {
+			return nil, dto.PaginationResponse{}, err
+		}
+		defer rows.Close()
+
+		// Process results
+		var courses []*entity.Course
+		for rows.Next() {
+			var course entity.Course
+			course.Category = &entity.Category{}
+
+			if err := rows.StructScan(&course); err != nil {
+				return nil, dto.PaginationResponse{}, err
+			}
+			courses = append(courses, &course)
+		}
+
+		// hasMore
+		hasMore := false
+		if len(courses) > pageReq.Limit {
+			hasMore = true
+			courses = courses[:pageReq.Limit]
+		}
+
+		return courses, dto.PaginationResponse{HasMore: hasMore}, nil
+	}
+}

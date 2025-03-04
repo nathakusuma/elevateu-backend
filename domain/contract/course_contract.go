@@ -2,6 +2,7 @@ package contract
 
 import (
 	"context"
+
 	"github.com/jmoiron/sqlx"
 
 	"github.com/google/uuid"
@@ -18,6 +19,10 @@ type ICourseRepository interface {
 		pageReq dto.PaginationRequest) ([]*entity.Course, dto.PaginationResponse, error)
 	UpdateCourse(ctx context.Context, tx sqlx.ExtContext, updates *dto.CourseUpdate) error
 	DeleteCourse(ctx context.Context, tx sqlx.ExtContext, id uuid.UUID) error
+
+	CreateEnrollment(ctx context.Context, courseID, studentID uuid.UUID) error
+	GetEnrolledCourses(ctx context.Context, studentID uuid.UUID,
+		pageReq dto.PaginationRequest) ([]*entity.Course, dto.PaginationResponse, error)
 }
 
 type ICourseService interface {
@@ -29,4 +34,8 @@ type ICourseService interface {
 	DeleteCourse(ctx context.Context, id uuid.UUID) error
 
 	GetPreviewVideoUploadURL(ctx context.Context, id uuid.UUID) (string, error)
+
+	CreateEnrollment(ctx context.Context, courseID, studentID uuid.UUID) error
+	GetEnrolledCourses(ctx context.Context, studentID uuid.UUID,
+		pageReq dto.PaginationRequest) ([]*dto.CourseResponse, dto.PaginationResponse, error)
 }

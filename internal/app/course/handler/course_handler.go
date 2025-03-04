@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
@@ -31,10 +32,11 @@ func InitCourseHandler(
 	courseGroup := router.Group("/courses")
 	courseGroup.Use(midw.RequireAuthenticated)
 
-	courseGroup.Post("/",
+	courseGroup.Post("",
 		midw.RequireOneOfRoles(enum.UserRoleAdmin),
 		handler.createCourse)
-	courseGroup.Get("/", handler.getCourses)
+	courseGroup.Get("", handler.getCourses)
+	courseGroup.Get("/my-enrollments", handler.getEnrolledCourses)
 	courseGroup.Get("/:id", handler.getCourseByID)
 	courseGroup.Patch("/:id",
 		midw.RequireOneOfRoles(enum.UserRoleAdmin),
@@ -45,6 +47,9 @@ func InitCourseHandler(
 	courseGroup.Get("/:id/preview-video-upload-url",
 		midw.RequireOneOfRoles(enum.UserRoleAdmin),
 		handler.GetPreviewVideoUploadURL)
+	courseGroup.Post("/:id/enrollments",
+		midw.RequireOneOfRoles(enum.UserRoleStudent),
+		handler.createEnrollment)
 }
 
 func (c *courseHandler) createCourse(ctx *fiber.Ctx) error {
@@ -181,5 +186,50 @@ func (c *courseHandler) GetPreviewVideoUploadURL(ctx *fiber.Ctx) error {
 
 	return ctx.Status(fiber.StatusOK).JSON(map[string]interface{}{
 		"preview_video_upload_url": url,
+	})
+}
+
+func (c *courseHandler) createEnrollment(ctx *fiber.Ctx) error {
+	courseID, err := uuid.Parse(ctx.Params("id"))
+	if err != nil {
+		return errorpkg.ErrValidation.Build().WithDetail("Invalid course ID")
+	}
+
+	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	err = c.svc.CreateEnrollment(ctx.Context(), courseID, userID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.SendStatus(fiber.StatusCreated)
+}
+
+func (c *courseHandler) getEnrolledCourses(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	var pageReq dto.PaginationRequest
+	if err := ctx.QueryParser(&pageReq); err != nil {
+		return errorpkg.ErrFailParseRequest
+	}
+
+	if err := c.val.ValidateStruct(pageReq); err != nil {
+		return err
+	}
+
+	courses, pageResp, err := c.svc.GetEnrolledCourses(ctx.Context(), userID, pageReq)
+	if err != nil {
+		return err
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(map[string]interface{}{
+		"courses":    courses,
+		"pagination": pageResp,
 	})
 }
