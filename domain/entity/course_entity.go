@@ -17,6 +17,7 @@ type Course struct {
 	TotalRating     float64   `db:"total_rating"`
 	EnrollmentCount int64     `db:"enrollment_count"`
 	ContentCount    int       `db:"content_count"`
+	TotalDuration   int       `db:"total_duration"`
 	CreatedAt       time.Time `db:"created_at"`
 	UpdatedAt       time.Time `db:"updated_at"`
 

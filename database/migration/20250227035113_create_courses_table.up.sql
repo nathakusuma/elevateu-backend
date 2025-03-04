@@ -10,6 +10,7 @@ CREATE TABLE courses
     total_rating     DOUBLE PRECISION         NOT NULL DEFAULT 0,
     enrollment_count BIGINT                   NOT NULL DEFAULT 0,
     content_count    INT                      NOT NULL DEFAULT 0,
+    total_duration INT NOT NULL DEFAULT 0,
     created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );

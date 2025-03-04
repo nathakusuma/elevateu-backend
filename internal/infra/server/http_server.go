@@ -109,6 +109,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	paymentRepository := paymentrepo.NewPaymentRepository(db, cache)
 	categoryRepository := categoryrepo.NewCategoryRepository(db)
 	courseRepository := courserepo.NewCourseRepository(db)
+	courseContentRepository := courserepo.NewCourseContentRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, cache, fileUtil, jwtAccess, mailer,
@@ -117,10 +118,12 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)
 	categoryService := categorysvc.NewCategoryService(categoryRepository, uuidInstance)
 	courseService := coursesvc.NewCourseService(courseRepository, fileUtil, uuidInstance)
+	courseContentService := coursesvc.NewCourseContentService(courseContentRepository, fileUtil, uuidInstance)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
 	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
 	paymenthnd.InitPaymentHandler(v1, paymentService, midtransService)
 	categoryhnd.InitCategoryHandler(v1, categoryService, middlewareInstance, validatorInstance)
 	coursehnd.InitCourseHandler(v1, middlewareInstance, validatorInstance, courseService)
+	coursehnd.InitCourseContentHandler(v1, middlewareInstance, validatorInstance, courseContentService)
 }

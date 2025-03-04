@@ -58,7 +58,7 @@ func (r *courseRepository) GetCourseByID(ctx context.Context, id uuid.UUID) (*en
 		SELECT
 			c.id, c.category_id, c.title, c.description, c.teacher_name,
 			c.rating, c.rating_count, c.total_rating, c.enrollment_count,
-			c.content_count, c.created_at, c.updated_at,
+			c.content_count, c.total_duration, c.created_at, c.updated_at,
 			cat.id AS "category.id", cat.name AS "category.name"
 		FROM courses c
 		LEFT JOIN categories cat ON c.category_id = cat.id
@@ -87,7 +87,7 @@ func (r *courseRepository) GetCourses(ctx context.Context, query dto.GetCoursesQ
 		SELECT
 			c.id, c.category_id, c.title, c.description, c.teacher_name,
 			c.rating, c.rating_count, c.total_rating, c.enrollment_count,
-			c.content_count, c.created_at, c.updated_at,
+			c.content_count, c.total_duration, c.created_at, c.updated_at,
 			cat.id AS "category.id", cat.name AS "category.name"
 		FROM courses c
 		LEFT JOIN categories cat ON c.category_id = cat.id
