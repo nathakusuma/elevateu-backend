@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -84,14 +85,14 @@ func (r *courseRepository) GetCourses(ctx context.Context, query dto.GetCoursesQ
 	paginationReq dto.PaginationRequest) ([]*entity.Course, dto.PaginationResponse, error) {
 
 	baseQuery := `
-		SELECT
-			c.id, c.category_id, c.title, c.description, c.teacher_name,
-			c.rating, c.rating_count, c.total_rating, c.enrollment_count,
-			c.content_count, c.total_duration, c.created_at, c.updated_at,
-			cat.id AS "category.id", cat.name AS "category.name"
-		FROM courses c
-		LEFT JOIN categories cat ON c.category_id = cat.id
-	`
+       SELECT
+          c.id, c.category_id, c.title, c.description, c.teacher_name,
+          c.rating, c.rating_count, c.total_rating, c.enrollment_count,
+          c.content_count, c.total_duration, c.created_at, c.updated_at,
+          cat.id AS "category.id", cat.name AS "category.name"
+       FROM courses c
+       LEFT JOIN categories cat ON c.category_id = cat.id
+    `
 
 	// WHERE clause based on query parameters
 	var whereConditions []string
@@ -116,23 +117,32 @@ func (r *courseRepository) GetCourses(ctx context.Context, query dto.GetCoursesQ
 		var orderDirection string
 
 		if paginationReq.Direction == "next" {
-			operator = ">"
-			orderDirection = "ASC"
-		} else {
 			operator = "<"
 			orderDirection = "DESC"
+		} else {
+			operator = ">"
+			orderDirection = "ASC"
 		}
 
-		whereConditions = append(whereConditions, fmt.Sprintf("c.id %s $%d", operator, argIndex))
-		args = append(args, paginationReq.Cursor)
-		argIndex++
+		var cursorRating float64
+		err := r.db.GetContext(ctx, &cursorRating,
+			"SELECT total_rating FROM courses WHERE id = $1", paginationReq.Cursor)
+		if err != nil {
+			return nil, dto.PaginationResponse{}, err
+		}
 
-		// Build final query (with WHERE clause and pagination)
+		whereConditions = append(whereConditions,
+			fmt.Sprintf("(c.total_rating %s $%d OR (c.total_rating = $%d AND c.id %s $%d))",
+				operator, argIndex, argIndex, operator, argIndex+1))
+		args = append(args, cursorRating, paginationReq.Cursor)
+		argIndex += 2
+
 		sqlQuery := baseQuery
 		if len(whereConditions) > 0 {
 			sqlQuery += " WHERE " + strings.Join(whereConditions, " AND ")
 		}
-		sqlQuery += fmt.Sprintf(" ORDER BY c.id %s LIMIT $%d", orderDirection, argIndex)
+		sqlQuery += fmt.Sprintf(" ORDER BY c.total_rating %s, c.id %s LIMIT $%d",
+			orderDirection, orderDirection, argIndex)
 		args = append(args, paginationReq.Limit+1)
 
 		// Execute
@@ -170,22 +180,19 @@ func (r *courseRepository) GetCourses(ctx context.Context, query dto.GetCoursesQ
 
 		return courses, dto.PaginationResponse{HasMore: hasMore}, nil
 	} else {
-		// When no cursor is provided, use only LIMIT
 		sqlQuery := baseQuery
 		if len(whereConditions) > 0 {
 			sqlQuery += " WHERE " + strings.Join(whereConditions, " AND ")
 		}
-		sqlQuery += fmt.Sprintf(" ORDER BY c.id ASC LIMIT $%d", argIndex)
+		sqlQuery += fmt.Sprintf(" ORDER BY c.total_rating DESC, c.id DESC LIMIT $%d", argIndex)
 		args = append(args, paginationReq.Limit+1)
 
-		// Execute
 		rows, err := r.db.QueryxContext(ctx, sqlQuery, args...)
 		if err != nil {
 			return nil, dto.PaginationResponse{}, err
 		}
 		defer rows.Close()
 
-		// Process results
 		var courses []*entity.Course
 		for rows.Next() {
 			var course entity.Course
@@ -197,7 +204,6 @@ func (r *courseRepository) GetCourses(ctx context.Context, query dto.GetCoursesQ
 			courses = append(courses, &course)
 		}
 
-		// hasMore
 		hasMore := false
 		if len(courses) > paginationReq.Limit {
 			hasMore = true
@@ -315,17 +321,16 @@ func (r *courseRepository) CreateEnrollment(ctx context.Context, courseID, stude
 func (r *courseRepository) GetEnrolledCourses(ctx context.Context, studentID uuid.UUID,
 	pageReq dto.PaginationRequest) ([]*entity.Course, dto.PaginationResponse, error) {
 	baseQuery := `
-		SELECT
-			c.id, c.category_id, c.title, c.description, c.teacher_name,
-			c.rating, c.rating_count, c.total_rating, c.enrollment_count,
-			c.content_count, c.total_duration, c.created_at, c.updated_at,
-			cat.id AS "category.id", cat.name AS "category.name"
-		FROM courses c
-		LEFT JOIN categories cat ON c.category_id = cat.id
-		JOIN course_enrollments ce ON c.id = ce.course_id
-		WHERE ce.student_id = $1
-		ORDER BY ce.last_accessed_at DESC
-	`
+       SELECT
+          c.id, c.category_id, c.title, c.description, c.teacher_name,
+          c.rating, c.rating_count, c.total_rating, c.enrollment_count,
+          c.content_count, c.total_duration, c.created_at, c.updated_at,
+          cat.id AS "category.id", cat.name AS "category.name"
+       FROM courses c
+       LEFT JOIN categories cat ON c.category_id = cat.id
+       JOIN course_enrollments ce ON c.id = ce.course_id
+       WHERE ce.student_id = $1
+    `
 
 	// cursor-based pagination
 	if pageReq.Cursor != uuid.Nil {
@@ -333,41 +338,48 @@ func (r *courseRepository) GetEnrolledCourses(ctx context.Context, studentID uui
 		var orderDirection string
 
 		if pageReq.Direction == "next" {
-			operator = ">"
-			orderDirection = "ASC"
-		} else {
 			operator = "<"
 			orderDirection = "DESC"
+		} else {
+			operator = ">"
+			orderDirection = "ASC"
 		}
 
-		sqlQuery := baseQuery + fmt.Sprintf(" AND c.id %s $2 ORDER BY c.id %s LIMIT $3", operator, orderDirection)
-
-		rows, err := r.db.QueryxContext(ctx, sqlQuery, studentID, pageReq.Cursor, pageReq.Limit+1)
+		var cursorTimestamp time.Time
+		err := r.db.GetContext(ctx, &cursorTimestamp,
+			"SELECT last_accessed_at FROM course_enrollments WHERE course_id = $1 AND student_id = $2",
+			pageReq.Cursor, studentID)
 		if err != nil {
-			return nil, dto.PaginationResponse{}, err
+			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to get cursor timestamp: %w", err)
+		}
+
+		sqlQuery := baseQuery + fmt.Sprintf(
+			" AND (ce.last_accessed_at %s $2 OR (ce.last_accessed_at = $2 AND c.id %s $3)) ORDER BY ce.last_accessed_at %s, c.id %s LIMIT $4",
+			operator, operator, orderDirection, orderDirection)
+
+		rows, err := r.db.QueryxContext(ctx, sqlQuery, studentID, cursorTimestamp, pageReq.Cursor, pageReq.Limit+1)
+		if err != nil {
+			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to execute query: %w", err)
 		}
 		defer rows.Close()
 
-		// Process results
 		var courses []*entity.Course
 		for rows.Next() {
 			var course entity.Course
 			course.Category = &entity.Category{}
 
 			if err := rows.StructScan(&course); err != nil {
-				return nil, dto.PaginationResponse{}, err
+				return nil, dto.PaginationResponse{}, fmt.Errorf("failed to scan row: %w", err)
 			}
 			courses = append(courses, &course)
 		}
 
-		// hasMore
 		hasMore := false
 		if len(courses) > pageReq.Limit {
 			hasMore = true
 			courses = courses[:pageReq.Limit]
 		}
 
-		// Reverse when "prev"
 		if pageReq.Direction == "prev" {
 			for i, j := 0, len(courses)-1; i < j; i, j = i+1, j-1 {
 				courses[i], courses[j] = courses[j], courses[i]
@@ -376,28 +388,25 @@ func (r *courseRepository) GetEnrolledCourses(ctx context.Context, studentID uui
 
 		return courses, dto.PaginationResponse{HasMore: hasMore}, nil
 	} else {
-		// When no cursor is provided, use only LIMIT
-		sqlQuery := baseQuery + " ORDER BY c.id ASC LIMIT $2"
+		sqlQuery := baseQuery + " ORDER BY ce.last_accessed_at DESC, c.id DESC LIMIT $2"
 
 		rows, err := r.db.QueryxContext(ctx, sqlQuery, studentID, pageReq.Limit+1)
 		if err != nil {
-			return nil, dto.PaginationResponse{}, err
+			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to execute query: %w", err)
 		}
 		defer rows.Close()
 
-		// Process results
 		var courses []*entity.Course
 		for rows.Next() {
 			var course entity.Course
 			course.Category = &entity.Category{}
 
 			if err := rows.StructScan(&course); err != nil {
-				return nil, dto.PaginationResponse{}, err
+				return nil, dto.PaginationResponse{}, fmt.Errorf("failed to scan row: %w", err)
 			}
 			courses = append(courses, &course)
 		}
 
-		// hasMore
 		hasMore := false
 		if len(courses) > pageReq.Limit {
 			hasMore = true

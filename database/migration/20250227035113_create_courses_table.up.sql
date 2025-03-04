@@ -17,4 +17,4 @@ CREATE TABLE courses
 
 CREATE INDEX courses_title_idx ON courses USING gist (title gist_trgm_ops);
 CREATE INDEX courses_category_id_index ON courses (category_id);
-CREATE INDEX courses_total_rating_index ON courses (total_rating);
+CREATE INDEX courses_total_rating_id_index ON courses (total_rating DESC, id DESC);

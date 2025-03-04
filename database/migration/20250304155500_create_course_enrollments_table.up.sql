@@ -9,5 +9,5 @@ CREATE TABLE course_enrollments
     PRIMARY KEY (course_id, student_id)
 );
 
-CREATE INDEX course_enrollments_student_id_index ON course_enrollments (student_id);
-CREATE INDEX course_enrollments_last_accessed_at_index ON course_enrollments (last_accessed_at);
+CREATE INDEX course_enrollments_student_lastaccessed_course_idx
+    ON course_enrollments (student_id, last_accessed_at DESC, course_id);
