@@ -42,7 +42,7 @@ func (s *courseService) CreateCourse(ctx context.Context,
 			"error":   err,
 			"request": req,
 		}, "[CourseService][CreateCourse] Failed to generate course ID")
-		return dto.CreateCourseResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return dto.CreateCourseResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	_, err = s.fileUtil.ValidateAndUploadFile(ctx, req.TeacherAvatar, fileutil.ImageContentTypes,
@@ -64,7 +64,7 @@ func (s *courseService) CreateCourse(ctx context.Context,
 			"error": err,
 			"path":  previewVideoPath,
 		}, "[CourseService][CreateCourse] Failed to get preview video signed upload URL")
-		return dto.CreateCourseResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return dto.CreateCourseResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	course := &entity.Course{
@@ -79,14 +79,14 @@ func (s *courseService) CreateCourse(ctx context.Context,
 	err = s.repo.CreateCourse(ctx, course)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "category not found") {
-			return dto.CreateCourseResponse{}, errorpkg.ErrValidation.WithDetail("Category not found")
+			return dto.CreateCourseResponse{}, errorpkg.ErrValidation.Build().WithDetail("Category not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
 			"request": req,
 		}, "[CourseService][CreateCourse] Failed to create course")
-		return dto.CreateCourseResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return dto.CreateCourseResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return dto.CreateCourseResponse{
@@ -106,7 +106,7 @@ func (s *courseService) GetCourseByID(ctx context.Context, id uuid.UUID) (*dto.C
 			"error": err,
 			"id":    id,
 		}, "[CourseService][GetCourseByID] Failed to get course by ID")
-		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	resp := &dto.CourseResponse{}
@@ -116,7 +116,7 @@ func (s *courseService) GetCourseByID(ctx context.Context, id uuid.UUID) (*dto.C
 			"error":  err,
 			"course": course,
 		}, "[CourseService][GetCourseByID] Failed to populate course response from entity")
-		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return resp, nil
@@ -131,7 +131,7 @@ func (s *courseService) GetCourses(ctx context.Context, query dto.GetCoursesQuer
 			"query": query,
 			"page":  pageReq,
 		}, "[CourseService][GetCourses] Failed to get courses")
-		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	resp := make([]*dto.CourseResponse, len(courses))
@@ -143,7 +143,7 @@ func (s *courseService) GetCourses(ctx context.Context, query dto.GetCoursesQuer
 				"error":  err,
 				"course": course,
 			}, "[CourseService][GetCourses] Failed to populate course response from entity")
-			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 		}
 	}
 
@@ -164,7 +164,7 @@ func (s *courseService) UpdateCourse(ctx context.Context, id uuid.UUID, req *dto
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseService][UpdateCourse] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 	defer func() {
 		err = tx.Rollback()
@@ -180,14 +180,14 @@ func (s *courseService) UpdateCourse(ctx context.Context, id uuid.UUID, req *dto
 		if err.Error() == "course not found" {
 			return errorpkg.ErrNotFound
 		} else if strings.HasPrefix(err.Error(), "category not found") {
-			return errorpkg.ErrValidation.WithDetail("Category not found")
+			return errorpkg.ErrValidation.Build().WithDetail("Category not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
 			"request": req,
 		}, "[CourseService][UpdateCourse] Failed to update course")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	if req.TeacherAvatar != nil {
@@ -211,7 +211,7 @@ func (s *courseService) UpdateCourse(ctx context.Context, id uuid.UUID, req *dto
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseService][UpdateCourse] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 	return nil
 }
@@ -222,7 +222,7 @@ func (s *courseService) DeleteCourse(ctx context.Context, id uuid.UUID) error {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseService][DeleteCourse] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 	defer func() {
 		err = tx.Rollback()
@@ -243,7 +243,7 @@ func (s *courseService) DeleteCourse(ctx context.Context, id uuid.UUID) error {
 			"error": err,
 			"id":    id,
 		}, "[CourseService][DeleteCourse] Failed to delete course")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	err = s.fileUtil.Delete(ctx, fmt.Sprintf("courses/teacher_avatar/%s", id))
@@ -252,7 +252,7 @@ func (s *courseService) DeleteCourse(ctx context.Context, id uuid.UUID) error {
 			"error": err,
 			"id":    id,
 		}, "[CourseService][DeleteCourse] Failed to delete teacher avatar")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	err = s.fileUtil.Delete(ctx, fmt.Sprintf("courses/thumbnail/%s", id))
@@ -261,7 +261,7 @@ func (s *courseService) DeleteCourse(ctx context.Context, id uuid.UUID) error {
 			"error": err,
 			"id":    id,
 		}, "[CourseService][DeleteCourse] Failed to delete thumbnail")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	err = s.fileUtil.Delete(ctx, fmt.Sprintf("courses/preview_video/%s", id))
@@ -270,7 +270,7 @@ func (s *courseService) DeleteCourse(ctx context.Context, id uuid.UUID) error {
 			"error": err,
 			"id":    id,
 		}, "[CourseService][DeleteCourse] Failed to delete preview video")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	err = tx.Commit()
@@ -278,7 +278,7 @@ func (s *courseService) DeleteCourse(ctx context.Context, id uuid.UUID) error {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseService][DeleteCourse] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 	return nil
 }
@@ -290,7 +290,7 @@ func (s *courseService) GetPreviewVideoUploadURL(_ context.Context, id uuid.UUID
 			"error": err,
 			"id":    id,
 		}, "[CourseService][GetPreviewVideoUploadURL] Failed to get preview video signed upload URL")
-		return "", errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return url, nil

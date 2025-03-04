@@ -73,7 +73,7 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestRegisterOTP] failed to get user by email")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// generate otp
@@ -83,7 +83,7 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestRegisterOTP] failed to generate otp")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	otp := strconv.Itoa(otpInt)
@@ -95,7 +95,7 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestRegisterOTP] failed to save otp")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// send otp to email
@@ -143,7 +143,7 @@ func (s *authService) Register(ctx context.Context,
 			"error":   err,
 			"request": loggableReq,
 		}, "[AuthService][Register] failed to get otp")
-		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return resp, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	if savedOtp != req.OTP {
@@ -157,7 +157,7 @@ func (s *authService) Register(ctx context.Context,
 			"error":   err,
 			"request": loggableReq,
 		}, "[AuthService][Register] failed to delete otp")
-		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return resp, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// Prepare user creation request
@@ -183,7 +183,7 @@ func (s *authService) Register(ctx context.Context,
 			"request": loggableReq,
 		}, "[AuthService][Register] failed to create user")
 
-		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return resp, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -203,7 +203,7 @@ func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (dto.Logi
 	user, err := s.userSvc.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, errorpkg.ErrNotFound) {
-			return dto.LoginResponse{}, errorpkg.ErrNotFound.WithDetail("User not found. Please register first.")
+			return dto.LoginResponse{}, errorpkg.ErrNotFound.Build().WithDetail("User not found. Please register first.")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -211,7 +211,7 @@ func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (dto.Logi
 			"user.email": req.Email,
 		}, "[AuthService][Login] failed to get user by email")
 
-		return dto.LoginResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return dto.LoginResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// check password
@@ -232,7 +232,7 @@ func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (dto.Logi
 			"error": err2,
 			"user":  user,
 		}, "[AuthService][Login] failed to populate user response")
-		return dto.LoginResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return dto.LoginResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return dto.LoginResponse{
@@ -254,7 +254,7 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (dto.Log
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[AuthService][Refresh] failed to get auth session by token")
-		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return resp, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	if authSession.ExpiresAt.Before(time.Now()) {
@@ -273,7 +273,7 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (dto.Log
 			"error": err2,
 			"user":  authSession.User,
 		}, "[AuthService][Refresh] failed to populate user response")
-		return resp, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return resp, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	resp = dto.LoginResponse{
@@ -297,7 +297,7 @@ func (s *authService) Logout(ctx context.Context, userID uuid.UUID) error {
 			"error":   err,
 			"user.id": userID,
 		}, "[AuthService][Logout] failed to delete auth session")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -312,14 +312,14 @@ func (s *authService) RequestPasswordResetOTP(ctx context.Context, email string)
 	_, err := s.userSvc.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, errorpkg.ErrNotFound) {
-			return errorpkg.ErrNotFound.WithDetail("User not found. Please register.")
+			return errorpkg.ErrNotFound.Build().WithDetail("User not found. Please register.")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestPasswordResetOTP] failed to get user by email")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// generate otp
@@ -329,7 +329,7 @@ func (s *authService) RequestPasswordResetOTP(ctx context.Context, email string)
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestPasswordResetOTP] failed to generate otp")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	otp := strconv.Itoa(otpInt)
@@ -341,7 +341,7 @@ func (s *authService) RequestPasswordResetOTP(ctx context.Context, email string)
 			"error":      err,
 			"user.email": email,
 		}, "[AuthService][RequestPasswordResetOTP] failed to save otp")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// send otp to email
@@ -380,7 +380,7 @@ func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRe
 			"error":      err,
 			"user.email": req.Email,
 		}, "[AuthService][ResetPassword] failed to get otp")
-		return dto.LoginResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return dto.LoginResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	if savedOtp != req.OTP {
@@ -394,7 +394,7 @@ func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRe
 			"error":      err,
 			"user.email": req.Email,
 		}, "[AuthService][ResetPassword] failed to delete otp")
-		return dto.LoginResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return dto.LoginResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// update user password
@@ -408,7 +408,7 @@ func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRe
 			"error":      err,
 			"user.email": req.Email,
 		}, "[AuthService][ResetPassword] failed to update user password")
-		return dto.LoginResponse{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return dto.LoginResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -431,7 +431,7 @@ func (s *authService) generateTokens(ctx context.Context, userID uuid.UUID,
 			"error":   err,
 			"user.id": userID,
 		}, "[AuthService][generateTokens] Failed to generate access token")
-		return "", "", errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// Generate refresh token
@@ -441,7 +441,7 @@ func (s *authService) generateTokens(ctx context.Context, userID uuid.UUID,
 			"error":   err,
 			"user.id": userID,
 		}, "[AuthService][generateTokens] Failed to generate refresh token")
-		return "", "", errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// Create auth session
@@ -454,7 +454,7 @@ func (s *authService) generateTokens(ctx context.Context, userID uuid.UUID,
 			"error":   err,
 			"user.id": userID,
 		}, "[AuthService][generateTokens] Failed to store auth session")
-		return "", "", errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return accessToken, refreshToken, nil

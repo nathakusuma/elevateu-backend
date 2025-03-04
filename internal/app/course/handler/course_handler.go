@@ -56,11 +56,11 @@ func (c *courseHandler) createCourse(ctx *fiber.Ctx) error {
 	var err error
 	req.TeacherAvatar, err = ctx.FormFile("teacher_avatar")
 	if err != nil {
-		return errorpkg.ErrFailParseRequest.WithDetail("Fail to parse teacher avatar")
+		return errorpkg.ErrFailParseRequest.Build().WithDetail("Fail to parse teacher avatar")
 	}
 	req.Thumbnail, err = ctx.FormFile("thumbnail")
 	if err != nil {
-		return errorpkg.ErrFailParseRequest.WithDetail("Fail to parse thumbnail")
+		return errorpkg.ErrFailParseRequest.Build().WithDetail("Fail to parse thumbnail")
 	}
 
 	if err = c.val.ValidateStruct(req); err != nil {
@@ -107,7 +107,7 @@ func (c *courseHandler) getCourses(ctx *fiber.Ctx) error {
 func (c *courseHandler) getCourseByID(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.WithDetail("invalid course ID")
+		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
 	}
 
 	resp, err := c.svc.GetCourseByID(ctx.Context(), id)
@@ -123,7 +123,7 @@ func (c *courseHandler) getCourseByID(ctx *fiber.Ctx) error {
 func (c *courseHandler) updateCourse(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.WithDetail("invalid course ID")
+		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
 	}
 
 	var req dto.UpdateCourseRequest
@@ -158,7 +158,7 @@ func (c *courseHandler) updateCourse(ctx *fiber.Ctx) error {
 func (c *courseHandler) deleteCourse(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.WithDetail("invalid course ID")
+		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
 	}
 
 	if err2 := c.svc.DeleteCourse(ctx.Context(), id); err2 != nil {
@@ -171,7 +171,7 @@ func (c *courseHandler) deleteCourse(ctx *fiber.Ctx) error {
 func (c *courseHandler) GetPreviewVideoUploadURL(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.WithDetail("invalid course ID")
+		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
 	}
 
 	url, err := c.svc.GetPreviewVideoUploadURL(ctx.Context(), id)

@@ -97,7 +97,7 @@ func (c *categoryHandler) updateCategory(ctx *fiber.Ctx) error {
 
 	id, err := uuid.Parse(req.ID)
 	if err != nil {
-		return errorpkg.ErrValidation.WithDetail("Invalid category ID")
+		return errorpkg.ErrValidation.Build().WithDetail("Invalid category ID")
 	}
 
 	if err2 := c.svc.UpdateCategory(id, req.Name); err2 != nil {
@@ -110,7 +110,7 @@ func (c *categoryHandler) updateCategory(ctx *fiber.Ctx) error {
 func (c *categoryHandler) deleteCategory(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.WithDetail("Invalid category ID")
+		return errorpkg.ErrValidation.Build().WithDetail("Invalid category ID")
 	}
 
 	if err2 := c.svc.DeleteCategory(id); err2 != nil {

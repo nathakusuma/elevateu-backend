@@ -44,7 +44,7 @@ func (s *paymentService) CreatePayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err,
 			"request": req,
 		}, "[PaymentService][CreatePayment] Failed to generate payment ID")
-		return "", errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// Create transaction in payment gateway
@@ -54,7 +54,7 @@ func (s *paymentService) CreatePayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err,
 			"request": req,
 		}, "[PaymentService][CreatePayment] Failed to create transaction in payment gateway")
-		return "", errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	payment := &entity.Payment{
@@ -73,7 +73,7 @@ func (s *paymentService) CreatePayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err2,
 			"request": req,
 		}, "[PaymentService][CreatePayment] Failed to create payment")
-		return "", errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return token, nil
@@ -87,7 +87,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			"payment.id":     id,
 			"payment.status": status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 	defer func() {
 		if err2 := tx.Rollback(); err2 != nil && !errors.Is(err2, sql.ErrTxDone) {
@@ -110,7 +110,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			"payment.id":     id,
 			"payment.status": status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to get payment by ID")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	payment.Status = status
@@ -122,7 +122,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			"payment.id":     id,
 			"payment.status": status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to update payment")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	if status == enum.PaymentStatusSuccess {
@@ -153,7 +153,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			"payment.id":     id,
 			"payment.status": status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return nil

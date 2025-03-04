@@ -56,7 +56,7 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 			"requester.id": creatorID,
 		}, "[UserService][CreateUser] Failed to generate user ID")
 
-		return uuid.Nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return uuid.Nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	hash, err2 := s.bcrypt.Hash(req.Password)
@@ -67,7 +67,7 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 			"requester.id": creatorID,
 		}, "[UserService][CreateUser] Failed to hash password")
 
-		return uuid.Nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return uuid.Nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// create user data
@@ -82,7 +82,7 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 	// Add role-specific data
 	if req.Role == enum.UserRoleStudent {
 		if req.Student == nil {
-			return uuid.Nil, errorpkg.ErrValidation.WithDetail("Student data is required")
+			return uuid.Nil, errorpkg.ErrValidation.Build().WithDetail("Student data is required")
 		}
 		user.Student = &entity.Student{
 			Instance: req.Student.Instance,
@@ -90,7 +90,7 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 		}
 	} else if req.Role == enum.UserRoleMentor {
 		if req.Mentor == nil {
-			return uuid.Nil, errorpkg.ErrValidation.WithDetail("Mentor data is required")
+			return uuid.Nil, errorpkg.ErrValidation.Build().WithDetail("Mentor data is required")
 		}
 		user.Mentor = &entity.Mentor{
 			Specialization: req.Mentor.Specialization,
@@ -112,7 +112,7 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 			"request":      req,
 			"requester.id": creatorID,
 		}, "[UserService][CreateUser] Failed to create user")
-		return uuid.Nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return uuid.Nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -138,7 +138,7 @@ func (s *userService) getUserByField(ctx context.Context, field string, value in
 			"field": field,
 			"value": value,
 		}, "[UserService][getUserByField] Failed to get user by field")
-		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return user, nil
@@ -166,7 +166,7 @@ func (s *userService) GetUserByID(ctx context.Context, id uuid.UUID, isMinimal b
 			"error": err,
 			"user":  user,
 		}, "[UserService][GetUserByID] Failed to populate user response")
-		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return resp, nil
@@ -186,7 +186,7 @@ func (s *userService) UpdatePassword(ctx context.Context, email, newPassword str
 			"error":      err,
 			"user.email": email,
 		}, "[UserService][UpdatePassword] Failed to hash password")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	userUpdates := &dto.UserUpdate{
@@ -199,7 +199,7 @@ func (s *userService) UpdatePassword(ctx context.Context, email, newPassword str
 			"error":      err,
 			"user.email": email,
 		}, "[UserService][UpdatePassword] Failed to update user password")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -236,7 +236,7 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upda
 			"error":   err,
 			"updates": userUpdate,
 		}, "[UserService][UpdateUser] Failed to update user")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -258,7 +258,7 @@ func (s *userService) UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatar
 			"error":   err,
 			"user.id": id,
 		}, "[UserService][UpdateUserAvatar] Failed to get user")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// handle avatar upload
@@ -280,7 +280,7 @@ func (s *userService) UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatar
 			"error":   err,
 			"updates": userUpdate,
 		}, "[UserService][UpdateUserAvatar] Failed to update user avatar")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -302,7 +302,7 @@ func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 			"error":   err,
 			"user.id": id,
 		}, "[UserService][DeleteUser] Failed to delete user")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// delete avatar
@@ -316,7 +316,7 @@ func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 			"error":   err,
 			"user.id": id,
 		}, "[UserService][DeleteUser] Failed to delete avatar")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 pass:
@@ -338,7 +338,7 @@ func (s *userService) DeleteUserAvatar(ctx context.Context, id uuid.UUID) error 
 			"error":   err,
 			"user.id": id,
 		}, "[UserService][DeleteUserAvatar] Failed to delete avatar")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	// update avatar URL
@@ -353,7 +353,7 @@ func (s *userService) DeleteUserAvatar(ctx context.Context, id uuid.UUID) error 
 			"error":   err,
 			"updates": userUpdate,
 		}, "[UserService][DeleteUserAvatar] Failed to update user avatar")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{

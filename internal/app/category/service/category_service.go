@@ -31,7 +31,7 @@ func (s *categoryService) CreateCategory(name string) (entity.Category, error) {
 			"error": err,
 			"name":  name,
 		}, "[CategoryService][CreateCategory] Failed to generate category ID")
-		return entity.Category{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return entity.Category{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	if err = s.repo.CreateCategory(id, name); err != nil {
@@ -43,7 +43,7 @@ func (s *categoryService) CreateCategory(name string) (entity.Category, error) {
 			"error": err,
 			"name":  name,
 		}, "[CategoryService][CreateCategory] Failed to create category")
-		return entity.Category{}, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return entity.Category{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return entity.Category{ID: id}, nil
@@ -55,7 +55,7 @@ func (s *categoryService) GetAllCategories() ([]entity.Category, error) {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CategoryService][GetAllCategories] Failed to get all categories")
-		return nil, errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return categories, nil
@@ -72,7 +72,7 @@ func (s *categoryService) UpdateCategory(id uuid.UUID, name string) error {
 			"id":    id,
 			"name":  name,
 		}, "[CategoryService][UpdateCategory] Failed to update category")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return nil
@@ -88,7 +88,7 @@ func (s *categoryService) DeleteCategory(id uuid.UUID) error {
 			"error": err,
 			"id":    id,
 		}, "[CategoryService][DeleteCategory] Failed to delete category")
-		return errorpkg.ErrInternalServer.WithTraceID(traceID)
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	return nil
