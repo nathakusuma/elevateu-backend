@@ -77,4 +77,16 @@ var (
 	ErrStudentAlreadyEnrolled = NewError(http.StatusConflict,
 		"student-already-enrolled",
 		"You have already enrolled in this course.")
+
+	ErrCannotFeedbackUnenrolledCourse = NewError(http.StatusUnprocessableEntity,
+		"cannot-feedback-unenrolled-course",
+		"You cannot give feedback to unenrolled course.")
+
+	ErrCannotFeedbackUncompletedCourse = NewError(http.StatusUnprocessableEntity,
+		"cannot-feedback-uncompleted-course",
+		"You cannot give feedback to uncompleted course.")
+
+	ErrStudentAlreadySubmittedFeedback = NewError(http.StatusConflict,
+		"student-already-submitted-feedback",
+		"You have already submitted feedback for this course.")
 )

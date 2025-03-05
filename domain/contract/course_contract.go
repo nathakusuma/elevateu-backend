@@ -23,6 +23,7 @@ type ICourseRepository interface {
 	CreateEnrollment(ctx context.Context, courseID, studentID uuid.UUID) error
 	GetEnrolledCourses(ctx context.Context, studentID uuid.UUID,
 		pageReq dto.PaginationRequest) ([]*entity.Course, dto.PaginationResponse, error)
+	GetEnrollment(ctx context.Context, courseID, studentID uuid.UUID) (*entity.CourseEnrollment, error)
 }
 
 type ICourseService interface {

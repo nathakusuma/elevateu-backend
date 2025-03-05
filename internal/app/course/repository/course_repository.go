@@ -418,3 +418,25 @@ func (r *courseRepository) GetEnrolledCourses(ctx context.Context, studentID uui
 		return courses, dto.PaginationResponse{HasMore: hasMore}, nil
 	}
 }
+
+func (r *courseRepository) GetEnrollment(ctx context.Context, courseID,
+	studentID uuid.UUID) (*entity.CourseEnrollment, error) {
+	query := `
+		SELECT
+			content_completed, is_completed
+		FROM course_enrollments
+		WHERE course_id = $1 AND student_id = $2
+	`
+
+	var enrollment entity.CourseEnrollment
+	err := r.db.GetContext(ctx, &enrollment, query, courseID, studentID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("enrollment not found")
+		}
+
+		return nil, err
+	}
+
+	return &enrollment, nil
+}

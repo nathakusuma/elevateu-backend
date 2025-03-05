@@ -111,6 +111,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	courseRepository := courserepo.NewCourseRepository(db)
 	courseContentRepository := courserepo.NewCourseContentRepository(db)
 	courseProgressRepository := courserepo.NewCourseProgressRepository(db)
+	courseFeedbackRepository := courserepo.NewCourseFeedbackRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, cache, fileUtil, jwtAccess,
@@ -121,6 +122,8 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	courseService := coursesvc.NewCourseService(courseRepository, fileUtil, uuidInstance)
 	courseContentService := coursesvc.NewCourseContentService(courseContentRepository, fileUtil, uuidInstance)
 	courseProgressService := coursesvc.NewCourseProgressService(courseProgressRepository, userRepository)
+	courseFeedbackService := coursesvc.NewCourseFeedbackService(courseFeedbackRepository, courseRepository, fileUtil,
+		uuidInstance)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
 	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
@@ -129,4 +132,5 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	coursehnd.InitCourseHandler(v1, middlewareInstance, validatorInstance, courseService)
 	coursehnd.InitCourseContentHandler(v1, middlewareInstance, validatorInstance, courseContentService)
 	coursehnd.InitCourseProgressHandler(v1, middlewareInstance, validatorInstance, courseProgressService)
+	coursehnd.InitCourseFeedbackHandler(v1, middlewareInstance, validatorInstance, courseFeedbackService)
 }
