@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
+	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
@@ -18,17 +19,20 @@ import (
 
 type courseContentService struct {
 	contentRepo contract.ICourseContentRepository
+	courseRepo  contract.ICourseRepository
 	fileUtil    fileutil.IFileUtil
 	uuid        uuidpkg.IUUID
 }
 
 func NewCourseContentService(
 	contentRepo contract.ICourseContentRepository,
+	courseRepo contract.ICourseRepository,
 	fileUtil fileutil.IFileUtil,
 	uuid uuidpkg.IUUID,
 ) contract.ICourseContentService {
 	return &courseContentService{
 		contentRepo: contentRepo,
+		courseRepo:  courseRepo,
 		fileUtil:    fileUtil,
 		uuid:        uuid,
 	}
@@ -329,6 +333,30 @@ func (s *courseContentService) GetMaterialUploadURL(ctx context.Context, id uuid
 
 func (s *courseContentService) GetCourseContents(ctx context.Context,
 	courseID uuid.UUID) ([]*dto.CourseContentResponse, error) {
+	userID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
+	isSubscribedBoost, ok2 := ctx.Value(ctxkey.IsSubscribedBoost).(bool)
+	if !ok || !ok2 {
+		return nil, errorpkg.ErrInvalidBearerToken
+	}
+
+	isEnrolled := true
+	_, err := s.courseRepo.GetEnrollment(ctx, courseID, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "enrollment not found") {
+			isEnrolled = false
+			goto pass
+		}
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":     err,
+			"course_id": courseID,
+			"user_id":   userID,
+		}, "[CourseContentService][GetCourseContents] Failed to get enrollment")
+		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+	}
+
+pass:
+	isRestricted := !(isEnrolled && isSubscribedBoost)
+
 	// (both are already sorted by order)
 	videos, materials, err := s.contentRepo.GetCourseContents(ctx, courseID)
 	if err != nil {
@@ -351,7 +379,7 @@ func (s *courseContentService) GetCourseContents(ctx context.Context,
 		// Compare orders and process the one with smaller order first
 		if videos[videoIdx].Order <= materials[materialIdx].Order {
 			responses[resultIdx] = &dto.CourseContentResponse{}
-			err = responses[resultIdx].PopulateFromCourseVideo(videos[videoIdx], s.fileUtil.GetSignedURL)
+			err = responses[resultIdx].PopulateFromCourseVideo(videos[videoIdx], isRestricted, s.fileUtil.GetSignedURL)
 			if err != nil {
 				traceID := log.ErrorWithTraceID(map[string]interface{}{
 					"error":    err,
@@ -362,7 +390,8 @@ func (s *courseContentService) GetCourseContents(ctx context.Context,
 			videoIdx++
 		} else {
 			responses[resultIdx] = &dto.CourseContentResponse{}
-			err = responses[resultIdx].PopulateFromCourseMaterial(materials[materialIdx], s.fileUtil.GetSignedURL)
+			err = responses[resultIdx].PopulateFromCourseMaterial(materials[materialIdx], isRestricted,
+				s.fileUtil.GetSignedURL)
 			if err != nil {
 				traceID := log.ErrorWithTraceID(map[string]interface{}{
 					"error":       err,
@@ -378,7 +407,7 @@ func (s *courseContentService) GetCourseContents(ctx context.Context,
 	// Process remaining
 	for videoIdx < len(videos) {
 		responses[resultIdx] = &dto.CourseContentResponse{}
-		err = responses[resultIdx].PopulateFromCourseVideo(videos[videoIdx], s.fileUtil.GetSignedURL)
+		err = responses[resultIdx].PopulateFromCourseVideo(videos[videoIdx], isRestricted, s.fileUtil.GetSignedURL)
 		if err != nil {
 			traceID := log.ErrorWithTraceID(map[string]interface{}{
 				"error":    err,
@@ -392,7 +421,8 @@ func (s *courseContentService) GetCourseContents(ctx context.Context,
 
 	for materialIdx < len(materials) {
 		responses[resultIdx] = &dto.CourseContentResponse{}
-		err = responses[resultIdx].PopulateFromCourseMaterial(materials[materialIdx], s.fileUtil.GetSignedURL)
+		err = responses[resultIdx].PopulateFromCourseMaterial(materials[materialIdx], isRestricted,
+			s.fileUtil.GetSignedURL)
 		if err != nil {
 			traceID := log.ErrorWithTraceID(map[string]interface{}{
 				"error":       err,

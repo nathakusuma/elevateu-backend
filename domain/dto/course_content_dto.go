@@ -17,22 +17,24 @@ type CourseContentResponse struct {
 	Description  string    `json:"description,omitempty"`
 	Subtitle     string    `json:"subtitle,omitempty"`
 	Duration     int       `json:"duration,omitempty"`
-	IsFree       bool      `json:"is_free,omitempty"`
+	IsFree       *bool     `json:"is_free,omitempty"`
 }
 
-func (c *CourseContentResponse) PopulateFromCourseVideo(video *entity.CourseVideo,
+func (c *CourseContentResponse) PopulateFromCourseVideo(video *entity.CourseVideo, isRestricted bool,
 	urlSigner func(string) (string, error)) error {
 	c.Type = "video"
 	c.ID = video.ID
 	c.Title = video.Title
 	c.Description = video.Description
 	c.Duration = video.Duration
-	c.IsFree = video.IsFree
+	c.IsFree = &video.IsFree
 
 	var err error
-	c.URL, err = urlSigner(fmt.Sprintf("course_videos/video/%s", video.ID.String()))
-	if err != nil {
-		return err
+	if video.IsFree || !isRestricted {
+		c.URL, err = urlSigner(fmt.Sprintf("course_videos/video/%s", video.ID.String()))
+		if err != nil {
+			return err
+		}
 	}
 
 	c.ThumbnailURL, err = urlSigner(fmt.Sprintf("course_videos/thumbnail/%s", video.ID.String()))
@@ -43,18 +45,20 @@ func (c *CourseContentResponse) PopulateFromCourseVideo(video *entity.CourseVide
 	return nil
 }
 
-func (c *CourseContentResponse) PopulateFromCourseMaterial(material *entity.CourseMaterial,
+func (c *CourseContentResponse) PopulateFromCourseMaterial(material *entity.CourseMaterial, isRestricted bool,
 	urlSigner func(string) (string, error)) error {
 	c.Type = "material"
 	c.ID = material.ID
 	c.Title = material.Title
 	c.Subtitle = material.Subtitle
-	c.IsFree = material.IsFree
+	c.IsFree = &material.IsFree
 
-	var err error
-	c.URL, err = urlSigner(fmt.Sprintf("course_materials/material/%s", material.ID.String()))
-	if err != nil {
-		return err
+	if material.IsFree || !isRestricted {
+		var err error
+		c.URL, err = urlSigner(fmt.Sprintf("course_materials/material/%s", material.ID.String()))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

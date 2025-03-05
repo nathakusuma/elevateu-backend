@@ -120,7 +120,8 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)
 	categoryService := categorysvc.NewCategoryService(categoryRepository, uuidInstance)
 	courseService := coursesvc.NewCourseService(courseRepository, fileUtil, uuidInstance)
-	courseContentService := coursesvc.NewCourseContentService(courseContentRepository, fileUtil, uuidInstance)
+	courseContentService := coursesvc.NewCourseContentService(courseContentRepository, courseRepository, fileUtil,
+		uuidInstance)
 	courseProgressService := coursesvc.NewCourseProgressService(courseProgressRepository, userRepository)
 	courseFeedbackService := coursesvc.NewCourseFeedbackService(courseFeedbackRepository, courseRepository, fileUtil,
 		uuidInstance)
