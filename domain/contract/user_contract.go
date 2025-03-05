@@ -5,6 +5,7 @@ import (
 	"mime/multipart"
 
 	"github.com/google/uuid"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
@@ -15,6 +16,8 @@ type IUserRepository interface {
 	GetUserByField(ctx context.Context, field string, value interface{}) (*entity.User, error)
 	UpdateUser(ctx context.Context, req *dto.UserUpdate) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+
+	AddPoint(ctx context.Context, tx sqlx.ExtContext, userID uuid.UUID, point int) error
 }
 
 type IUserService interface {

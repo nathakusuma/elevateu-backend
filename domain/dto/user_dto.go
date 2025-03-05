@@ -22,11 +22,12 @@ type UserResponse struct {
 }
 
 type StudentData struct {
-	Instance                 string     `json:"instance,omitempty"`
-	Major                    string     `json:"major,omitempty"`
-	Point                    *int       `json:"point,omitempty"`
-	SubscribedBoostUntil     *time.Time `json:"subscribed_boost_until,omitempty"`
-	SubscribedChallengeUntil *time.Time `json:"subscribed_challenge_until,omitempty"`
+	Instance                 string            `json:"instance,omitempty"`
+	Major                    string            `json:"major,omitempty"`
+	Point                    *int              `json:"point,omitempty"`
+	Badge                    enum.StudentBadge `json:"badge,omitempty"`
+	SubscribedBoostUntil     *time.Time        `json:"subscribed_boost_until,omitempty"`
+	SubscribedChallengeUntil *time.Time        `json:"subscribed_challenge_until,omitempty"`
 }
 
 type MentorData struct {
@@ -65,6 +66,7 @@ func (u *UserResponse) PopulateFromEntity(user *entity.User,
 			Major:    user.Student.Major,
 			Point:    &user.Student.Point,
 		}
+		u.Student.Badge = enum.GetBadge(user.Student.Point)
 		if !user.Student.SubscribedBoostUntil.IsZero() {
 			u.Student.SubscribedBoostUntil = &user.Student.SubscribedBoostUntil
 		}

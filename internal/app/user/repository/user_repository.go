@@ -385,3 +385,12 @@ func (r *userRepository) deleteUser(ctx context.Context, tx sqlx.ExtContext, id 
 
 	return nil
 }
+
+func (r *userRepository) AddPoint(ctx context.Context, tx sqlx.ExtContext, userID uuid.UUID, point int) error {
+	_, err := tx.ExecContext(ctx, `UPDATE students SET point = point + $1 WHERE user_id = $2`, point, userID)
+	if err != nil {
+		return fmt.Errorf("failed to add point: %w", err)
+	}
+
+	return nil
+}
