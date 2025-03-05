@@ -186,6 +186,158 @@ components:
           examples:
             - "Programming"
 
+    Course:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        category:
+          type: string
+          examples:
+            - "Programming"
+        title:
+          type: string
+          examples:
+            - "Introduction to Go Programming"
+        description:
+          type: string
+          examples:
+            - "Learn the fundamentals of Go programming language."
+        teacher_name:
+          type: string
+          examples:
+            - "John Doe"
+        teacher_avatar_url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/teacher_avatar.jpg"
+        thumbnail_url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/thumbnail.jpg"
+        preview_video_url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/preview_video.mp4"
+        rating:
+          type: number
+          format: float
+          examples:
+            - 4.5
+        rating_count:
+          type: integer
+          examples:
+            - 25
+        enrollment_count:
+          type: integer
+          examples:
+            - 120
+        content_count:
+          type: integer
+          examples:
+            - 15
+        total_duration:
+          type: integer
+          examples:
+            - 450
+        content_completed:
+          type: integer
+          examples:
+            - 7
+        is_completed:
+          type: boolean
+          examples:
+            - false
+
+    CourseContent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [ video, material ]
+          examples:
+            - "video"
+        id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/video.mp4"
+        thumbnail_url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/thumbnail.jpg"
+        title:
+          type: string
+          examples:
+            - "Introduction to Variables"
+        description:
+          type: string
+          examples:
+            - "Learn about variables in Go programming language"
+        subtitle:
+          type: string
+          examples:
+            - "Variables fundamentals"
+        duration:
+          type: integer
+          examples:
+            - 30
+        is_free:
+          type: boolean
+          examples:
+            - false
+
+    CourseFeedback:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        rating:
+          type: number
+          format: float
+          examples:
+            - 4.5
+        feedback:
+          type: string
+          examples:
+            - "Great course, learned a lot!"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        student_name:
+          type: string
+          examples:
+            - "Jane Smith"
+        student_avatar_url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/student_avatar.jpg"
+
+    PaginationResponse:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+
     ProblemDetails:
       type: object
       properties:
@@ -396,6 +548,55 @@ components:
             status: 409
             instance: "https://elevateu.nathakusuma.com/api/v1/categories"
 
+    ## Courses
+    ErrCannotFeedbackUnenrolledCourse:
+      description: Cannot feedback unenrolled course
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/cannot-feedback-unenrolled-course"
+            title: "You cannot give feedback to unenrolled course."
+            status: 422
+            instance: "https://elevateu.nathakusuma.com/api/v1/courses/01949e48-9f6b-796b-9611-3c9025493233/feedbacks"
+
+    ErrCannotFeedbackUncompletedCourse:
+      description: Cannot feedback uncompleted course
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/cannot-feedback-uncompleted-course"
+            title: "You cannot give feedback to uncompleted course."
+            status: 422
+            instance: "https://elevateu.nathakusuma.com/api/v1/courses/01949e48-9f6b-796b-9611-3c9025493233/feedbacks"
+
+    ErrStudentAlreadySubmittedFeedback:
+      description: Student already submitted feedback
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/student-already-submitted-feedback"
+            title: "You have already submitted feedback for this course."
+            status: 409
+            instance: "https://elevateu.nathakusuma.com/api/v1/courses/01949e48-9f6b-796b-9611-3c9025493233/feedbacks"
+
+    ErrStudentAlreadyEnrolled:
+      description: Student already enrolled
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/student-already-enrolled"
+            title: "You have already enrolled in this course."
+            status: 409
+            instance: "https://elevateu.nathakusuma.com/api/v1/courses/01949e48-9f6b-796b-9611-3c9025493233/enrollments"
+
     LoginResponse:
       description: Login response
       content:
@@ -425,6 +626,14 @@ tags:
     description: User management operations
   - name: Categories
     description: Course & Challenge Category
+  - name: Courses
+    description: Course management operations
+  - name: Course Contents
+    description: Course content management operations
+  - name: Course Feedbacks
+    description: Course feedback operations
+  - name: Course Progress
+    description: Course progress tracking operations
 
 paths:
   /auth/register/otp:
@@ -1062,6 +1271,1214 @@ paths:
           $ref: '#/components/responses/BearerTokenErrors'
         '403':
           $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses:
+    post:
+      tags:
+        - Courses
+      summary: Create New Course
+      description: Create a new course. Only available to users with admin role.
+      operationId: createCourse
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - category_id
+                - title
+                - description
+                - teacher_name
+                - teacher_avatar
+                - thumbnail
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                  examples:
+                    - "01949e48-9f6b-796b-9611-3c9025493233"
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Introduction to Go Programming"
+                description:
+                  type: string
+                  minLength: 3
+                  maxLength: 1000
+                  examples:
+                    - "Learn the fundamentals of Go programming language."
+                teacher_name:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "John Doe"
+                teacher_avatar:
+                  type: string
+                  format: binary
+                  description: Teacher avatar image (max 2MB, image formats only)
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: Course thumbnail image (max 2MB, image formats only)
+      responses:
+        '201':
+          description: Success - Course created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - course
+                  - preview_video_upload_url
+                properties:
+                  course:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        examples:
+                          - "01949e48-9f6b-796b-9611-3c9025493233"
+                  preview_video_upload_url:
+                    type: string
+                    format: uri
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '413':
+          $ref: '#/components/responses/ErrFileTooLarge'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    get:
+      tags:
+        - Courses
+      summary: Get Courses
+      description: Get a list of courses with pagination and optional filtering.
+      operationId: getCourses
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+          description: Filter courses by category ID
+        - name: title
+          in: query
+          schema:
+            type: string
+          description: Filter courses by title (partial match)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - courses
+                  - pagination
+                properties:
+                  courses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Course'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/my-enrollments:
+    get:
+      tags:
+        - Courses
+      summary: Get Enrolled Courses
+      description: Get a list of courses that the current user is enrolled in.
+      operationId: getEnrolledCourses
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - courses
+                  - pagination
+                properties:
+                  courses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Course'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get Course by ID
+      operationId: getCourseById
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - course
+                properties:
+                  course:
+                    $ref: '#/components/schemas/Course'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    patch:
+      tags:
+        - Courses
+      summary: Update Course
+      description: Update a course by ID. Only available to users with admin role.
+      operationId: updateCourse
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                  examples:
+                    - "01949e48-9f6b-796b-9611-3c9025493233"
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Advanced Go Programming"
+                description:
+                  type: string
+                  minLength: 3
+                  maxLength: 1000
+                  examples:
+                    - "Dive deeper into advanced Go programming concepts."
+                teacher_name:
+                  type: string
+                  minLength: 3
+                  maxLength: 60
+                  examples:
+                    - "Jane Smith"
+                teacher_avatar:
+                  type: string
+                  format: binary
+                  description: Teacher avatar image (max 2MB, image formats only)
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: Course thumbnail image (max 2MB, image formats only)
+      responses:
+        '204':
+          description: Success - Course updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/ErrFileTooLarge'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Courses
+      summary: Delete Course
+      description: Delete a course by ID. Only available to users with admin role.
+      operationId: deleteCourse
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - Course deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/{id}/preview-video-upload-url:
+    get:
+      tags:
+        - Courses
+      summary: Get Preview Video Upload URL
+      description: Get a signed URL for uploading a preview video for a course. Only available to users with admin role.
+      operationId: getPreviewVideoUploadURL
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - preview_video_upload_url
+                properties:
+                  preview_video_upload_url:
+                    type: string
+                    format: uri
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/{id}/enrollments:
+    post:
+      tags:
+        - Courses
+      summary: Enroll in Course
+      description: Enroll the current user in a course. Only available to users with student role and active Skill Boost subscription.
+      operationId: createEnrollment
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '201':
+          description: Success - Enrollment created successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ErrStudentAlreadyEnrolled'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/{courseId}/contents:
+    get:
+      tags:
+        - Course Contents
+      summary: Get Course Contents
+      description: Get all contents of a course.
+      operationId: getCourseContents
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - course_contents
+                properties:
+                  course_contents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CourseContent'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/{courseId}/contents/videos:
+    post:
+      tags:
+        - Course Contents
+      summary: Create Course Video
+      description: Create a new video content for a course. Only available to users with admin role.
+      operationId: createVideo
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - duration
+                - order
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Introduction to Variables"
+                description:
+                  type: string
+                  minLength: 3
+                  maxLength: 1000
+                  examples:
+                    - "Learn about variables in Go programming language"
+                duration:
+                  type: integer
+                  minimum: 1
+                  examples:
+                    - 30
+                is_free:
+                  type: boolean
+                  default: false
+                  examples:
+                    - true
+                order:
+                  type: integer
+                  examples:
+                    - 1
+      responses:
+        '201':
+          description: Success - Video created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - course_content
+                  - video_upload_url
+                  - thumbnail_upload_url
+                properties:
+                  course_content:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        examples:
+                          - video
+                      id:
+                        type: string
+                        format: uuid
+                  video_upload_url:
+                    type: string
+                    format: uri
+                  thumbnail_upload_url:
+                    type: string
+                    format: uri
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/{courseId}/contents/materials:
+    post:
+      tags:
+        - Course Contents
+      summary: Create Course Material
+      description: Create a new material content for a course. Only available to users with admin role.
+      operationId: createMaterial
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - subtitle
+                - order
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Notes"
+                subtitle:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Quick reference for Go variables"
+                is_free:
+                  type: boolean
+                  default: false
+                  examples:
+                    - true
+                order:
+                  type: integer
+                  examples:
+                    - 2
+      responses:
+        '201':
+          description: Success - Material created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - course_content
+                  - material_upload_url
+                properties:
+                  course_content:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        examples:
+                          - material
+                      id:
+                        type: string
+                        format: uuid
+                  material_upload_url:
+                    type: string
+                    format: uri
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/contents/videos/{id}:
+    patch:
+      tags:
+        - Course Contents
+      summary: Update Course Video
+      description: Update a video content by ID. Only available to users with admin role.
+      operationId: updateVideo
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Advanced Variables in Go"
+                description:
+                  type: string
+                  minLength: 3
+                  maxLength: 1000
+                  examples:
+                    - "Dive deeper into variables in Go programming language"
+                duration:
+                  type: integer
+                  minimum: 1
+                  examples:
+                    - 45
+                is_free:
+                  type: boolean
+                  examples:
+                    - false
+                order:
+                  type: integer
+                  examples:
+                    - 3
+      responses:
+        '204':
+          description: Success - Video updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Course Contents
+      summary: Delete Course Video
+      description: Delete a video content by ID. Only available to users with admin role.
+      operationId: deleteVideo
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - Video deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/contents/videos/{id}/upload-url:
+    get:
+      tags:
+        - Course Contents
+      summary: Get Video Upload URLs
+      description: Get signed URLs for uploading a video and thumbnail. Only available to users with admin role.
+      operationId: getVideoUploadURLs
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - video_upload_url
+                  - thumbnail_upload_url
+                properties:
+                  video_upload_url:
+                    type: string
+                    format: uri
+                  thumbnail_upload_url:
+                    type: string
+                    format: uri
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/contents/materials/{id}:
+    patch:
+      tags:
+        - Course Contents
+      summary: Update Course Material
+      description: Update a material content by ID. Only available to users with admin role.
+      operationId: updateMaterial
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Notes"
+                subtitle:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Comprehensive reference for Go variables"
+                is_free:
+                  type: boolean
+                  examples:
+                    - false
+                order:
+                  type: integer
+                  examples:
+                    - 4
+      responses:
+        '204':
+          description: Success - Material updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Course Contents
+      summary: Delete Course Material
+      description: Delete a material content by ID. Only available to users with admin role.
+      operationId: deleteMaterial
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - Material deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/contents/materials/{id}/upload-url:
+    get:
+      tags:
+        - Course Contents
+      summary: Get Material Upload URL
+      description: Get a signed URL for uploading a material file. Only available to users with admin role.
+      operationId: getMaterialUploadURL
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - material_upload_url
+                properties:
+                  material_upload_url:
+                    type: string
+                    format: uri
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/contents/videos/{videoId}/progresses:
+    post:
+      tags:
+        - Course Progress
+      summary: Update Video Progress
+      description: Update progress for a video. Only available to users with student role.
+      operationId: updateVideoProgress
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: videoId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - last_position
+              properties:
+                last_position:
+                  type: integer
+                  minimum: 0
+                  examples:
+                    - 120
+                is_completed:
+                  type: boolean
+                  examples:
+                    - true
+      responses:
+        '204':
+          description: Success - Video progress updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/contents/materials/{materialId}/progresses:
+    post:
+      tags:
+        - Course Progress
+      summary: Complete Material
+      description: Mark a material as completed. Only available to users with student role.
+      operationId: completeMaterial
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: materialId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - Material completed successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/{courseId}/feedbacks:
+    post:
+      tags:
+        - Course Feedbacks
+      summary: Create Feedback
+      description: Submit feedback for a completed course. Only available to users with student role who have completed the course.
+      operationId: createFeedback
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rating
+                - comment
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  examples:
+                    - 5
+                comment:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                  examples:
+                    - "Great course, very informative and well structured."
+      responses:
+        '201':
+          description: Success - Feedback submitted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '409':
+          $ref: '#/components/responses/ErrStudentAlreadySubmittedFeedback'
+        '422':
+          description: Validation error or course-specific requirements not met
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                validation:
+                  value:
+                    type: "https://elevateu.nathakusuma.com/errors/validation-error"
+                    title: "There are invalid fields in your request. Please check and try again"
+                    status: 422
+                    detail: "Rating must be between 1 and 5"
+                    instance: "https://elevateu.nathakusuma.com/api/v1/courses/01949e48-9f6b-796b-9611-3c9025493233/feedbacks"
+                    validation_errors:
+                      - rating:
+                          tag: "max"
+                          param: "5"
+                          translation: "Rating must be at most 5"
+                unenrolled:
+                  value:
+                    type: "https://elevateu.nathakusuma.com/errors/validation-error"
+                    title: "There are invalid fields in your request. Please check and try again"
+                    status: 422
+                    detail: "You cannot give feedback to unenrolled course"
+                    instance: "https://elevateu.nathakusuma.com/api/v1/courses/01949e48-9f6b-796b-9611-3c9025493233/feedbacks"
+                uncompleted:
+                  value:
+                    type: "https://elevateu.nathakusuma.com/errors/validation-error"
+                    title: "There are invalid fields in your request. Please check and try again"
+                    status: 422
+                    detail: "You cannot give feedback to uncompleted course"
+                    instance: "https://elevateu.nathakusuma.com/api/v1/courses/01949e48-9f6b-796b-9611-3c9025493233/feedbacks"
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    get:
+      tags:
+        - Course Feedbacks
+      summary: Get Course Feedbacks
+      description: Get all feedbacks for a course.
+      operationId: getFeedbacks
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - feedbacks
+                  - pagination
+                properties:
+                  feedbacks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CourseFeedback'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /courses/feedbacks/{id}:
+    patch:
+      tags:
+        - Course Feedbacks
+      summary: Update Feedback
+      description: Update a feedback by ID. Users can only update their own feedback.
+      operationId: updateFeedback
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  examples:
+                    - 4
+                comment:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                  examples:
+                    - "Updated review: Good course with some areas for improvement."
+      responses:
+        '204':
+          description: Success - Feedback updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenUser'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Course Feedbacks
+      summary: Delete Feedback
+      description: Delete a feedback by ID. Users can only delete their own feedback.
+      operationId: deleteFeedback
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - Feedback deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenUser'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
