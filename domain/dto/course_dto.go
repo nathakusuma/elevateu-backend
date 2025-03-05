@@ -23,6 +23,9 @@ type CourseResponse struct {
 	EnrollmentCount  *int64    `json:"enrollment_count,omitempty"`
 	ContentCount     *int      `json:"content_count,omitempty"`
 	TotalDuration    *int      `json:"total_duration,omitempty"`
+
+	ContentCompleted *int  `json:"content_completed,omitempty"`
+	IsCompleted      *bool `json:"is_completed,omitempty"`
 }
 
 func (c *CourseResponse) PopulateFromEntity(course *entity.Course,
@@ -58,6 +61,11 @@ func (c *CourseResponse) PopulateFromEntity(course *entity.Course,
 	c.TotalDuration = &course.TotalDuration
 
 	return nil
+}
+
+func (c *CourseResponse) PopulateFromCourseEnrollment(enrollment *entity.CourseEnrollment) {
+	c.ContentCompleted = &enrollment.ContentCompleted
+	c.IsCompleted = &enrollment.IsCompleted
 }
 
 type CreateCourseRequest struct {

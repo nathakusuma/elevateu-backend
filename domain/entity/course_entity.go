@@ -21,5 +21,6 @@ type Course struct {
 	CreatedAt       time.Time `db:"created_at"`
 	UpdatedAt       time.Time `db:"updated_at"`
 
-	Category *Category `db:"category"`
+	Category   *Category         `db:"category"`
+	Enrollment *CourseEnrollment `db:"enrollment"`
 }

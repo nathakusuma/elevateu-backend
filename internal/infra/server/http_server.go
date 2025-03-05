@@ -110,15 +110,17 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	categoryRepository := categoryrepo.NewCategoryRepository(db)
 	courseRepository := courserepo.NewCourseRepository(db)
 	courseContentRepository := courserepo.NewCourseContentRepository(db)
+	courseProgressRepository := courserepo.NewCourseProgressRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
-	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, cache, fileUtil, jwtAccess, mailer,
-		randomGenerator, uuidInstance)
+	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, cache, fileUtil, jwtAccess,
+		mailer, randomGenerator, uuidInstance)
 	midtransService := paymentsvc.NewMidtransService()
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)
 	categoryService := categorysvc.NewCategoryService(categoryRepository, uuidInstance)
 	courseService := coursesvc.NewCourseService(courseRepository, fileUtil, uuidInstance)
 	courseContentService := coursesvc.NewCourseContentService(courseContentRepository, fileUtil, uuidInstance)
+	courseProgressService := coursesvc.NewCourseProgressService(courseProgressRepository, userRepository)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
 	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
@@ -126,4 +128,5 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	categoryhnd.InitCategoryHandler(v1, categoryService, middlewareInstance, validatorInstance)
 	coursehnd.InitCourseHandler(v1, middlewareInstance, validatorInstance, courseService)
 	coursehnd.InitCourseContentHandler(v1, middlewareInstance, validatorInstance, courseContentService)
+	coursehnd.InitCourseProgressHandler(v1, middlewareInstance, validatorInstance, courseProgressService)
 }

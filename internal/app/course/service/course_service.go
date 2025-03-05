@@ -3,12 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"strings"
 
 	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
+	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
@@ -350,6 +350,7 @@ func (s *courseService) GetEnrolledCourses(ctx context.Context, studentID uuid.U
 			}, "[CourseEnrollmentService][GetEnrolledCourses] Failed to populate course response from entity")
 			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 		}
+		resp[i].PopulateFromCourseEnrollment(course.Enrollment)
 	}
 
 	return resp, pageResp, nil
