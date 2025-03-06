@@ -22,6 +22,10 @@ var (
 		"forbidden-user",
 		"You're not allowed to access this resource.")
 
+	ErrNotSubscribed = NewError(http.StatusForbidden,
+		"not-subscribed",
+		"You're not subscribed to this feature. Please subscribe first.")
+
 	ErrNotFound = NewError(http.StatusNotFound,
 		"not-found",
 		"Resource not found.")
