@@ -24,6 +24,7 @@ import (
 	userrepo "github.com/nathakusuma/elevateu-backend/internal/app/user/repository"
 	usersvc "github.com/nathakusuma/elevateu-backend/internal/app/user/service"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/cache"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/gcp"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
@@ -96,6 +97,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	jwtAccess := jwt.NewJwt(env.GetEnv().JwtAccessExpireDuration, env.GetEnv().JwtAccessSecretKey)
 	mailer := mail.NewMailDialer()
 	randomGenerator := randgen.GetRandGen()
+	txManager := database.NewTransactionManager(db)
 	uuidInstance := uuidpkg.GetUUID()
 	validatorInstance := validator.NewValidator()
 	middlewareInstance := middleware.NewMiddleware(jwtAccess)
@@ -123,12 +125,12 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	midtransService := paymentsvc.NewMidtransService()
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)
 	categoryService := categorysvc.NewCategoryService(categoryRepository, uuidInstance)
-	courseService := coursesvc.NewCourseService(courseRepository, fileUtil, uuidInstance)
+	courseService := coursesvc.NewCourseService(courseRepository, fileUtil, txManager, uuidInstance)
 	courseContentService := coursesvc.NewCourseContentService(courseContentRepository, courseRepository, fileUtil,
 		uuidInstance)
-	courseProgressService := coursesvc.NewCourseProgressService(courseProgressRepository, userRepository)
+	courseProgressService := coursesvc.NewCourseProgressService(courseProgressRepository, txManager, userRepository)
 	courseFeedbackService := coursesvc.NewCourseFeedbackService(courseFeedbackRepository, courseRepository, fileUtil,
-		uuidInstance)
+		txManager, uuidInstance)
 	challengeGroupService := challengesvc.NewChallengeGroupService(challengeGroupRepository, fileUtil, uuidInstance)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)

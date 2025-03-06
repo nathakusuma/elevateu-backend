@@ -3,25 +3,23 @@ package contract
 import (
 	"context"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 )
 
 type ICourseFeedbackRepository interface {
-	BeginTx(ctx context.Context) (*sqlx.Tx, error)
-
-	CreateFeedback(ctx context.Context, tx sqlx.ExtContext, feedback *entity.CourseFeedback) error
+	CreateFeedback(ctx context.Context, txWrapper database.ITransaction, feedback *entity.CourseFeedback) error
 	GetFeedbacksByCourseID(ctx context.Context, courseID uuid.UUID,
 		pageReq dto.PaginationRequest) ([]*entity.CourseFeedback, dto.PaginationResponse, error)
 	GetFeedbackByID(ctx context.Context, feedbackID uuid.UUID) (*entity.CourseFeedback, error)
-	UpdateFeedback(ctx context.Context, tx sqlx.ExtContext, feedbackID uuid.UUID, updates dto.CourseFeedbackUpdate) error
-	DeleteFeedback(ctx context.Context, tx sqlx.ExtContext, feedbackID uuid.UUID) error
+	UpdateFeedback(ctx context.Context, txWrapper database.ITransaction, feedbackID uuid.UUID,
+		updates dto.CourseFeedbackUpdate) error
+	DeleteFeedback(ctx context.Context, txWrapper database.ITransaction, feedbackID uuid.UUID) error
 
-	UpdateCourseRating(ctx context.Context, tx sqlx.ExtContext, courseID uuid.UUID, count int64, rating,
+	UpdateCourseRating(ctx context.Context, txWrapper database.ITransaction, courseID uuid.UUID, count int64, rating,
 		total float64) error
 }
 

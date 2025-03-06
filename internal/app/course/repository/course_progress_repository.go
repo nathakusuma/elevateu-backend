@@ -11,6 +11,7 @@ import (
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 )
 
 type courseProgressRepository struct {
@@ -23,15 +24,9 @@ func NewCourseProgressRepository(db *sqlx.DB) contract.ICourseProgressRepository
 	}
 }
 
-func (r *courseProgressRepository) BeginTx() (*sqlx.Tx, error) {
-	return r.db.Beginx()
-}
-
-func (r *courseProgressRepository) UpdateVideoProgress(ctx context.Context, tx sqlx.ExtContext,
+func (r *courseProgressRepository) UpdateVideoProgress(ctx context.Context, txWrapper database.ITransaction,
 	progress entity.CourseVideoProgress) (bool, error) {
-	if tx == nil {
-		tx = r.db
-	}
+	tx := txWrapper.GetTx()
 
 	var existingProgress entity.CourseVideoProgress
 	query := `
@@ -83,11 +78,9 @@ func (r *courseProgressRepository) UpdateVideoProgress(ctx context.Context, tx s
 	return newlyCompleted, nil
 }
 
-func (r *courseProgressRepository) UpdateMaterialProgress(ctx context.Context, tx sqlx.ExtContext,
+func (r *courseProgressRepository) UpdateMaterialProgress(ctx context.Context, txWrapper database.ITransaction,
 	progress entity.CourseMaterialProgress) (bool, error) {
-	if tx == nil {
-		tx = r.db
-	}
+	tx := txWrapper.GetTx()
 
 	query := `
 		INSERT INTO course_material_progresses (student_id, material_id)
@@ -108,8 +101,10 @@ func (r *courseProgressRepository) UpdateMaterialProgress(ctx context.Context, t
 	return rowsAffected > 0, nil
 }
 
-func (r *courseProgressRepository) IncrementCourseProgress(ctx context.Context, tx *sqlx.Tx, courseID,
-	studentID uuid.UUID) (bool, error) {
+func (r *courseProgressRepository) IncrementCourseProgress(ctx context.Context, txWrapper database.ITransaction,
+	courseID, studentID uuid.UUID) (bool, error) {
+	tx := txWrapper.GetTx()
+
 	updateQuery := `
 		UPDATE course_enrollments
 		SET content_completed = content_completed + 1,
@@ -187,11 +182,9 @@ func (r *courseProgressRepository) GetContentCourseID(ctx context.Context, conte
 	return courseID, nil
 }
 
-func (r *courseProgressRepository) BatchDecrementCourseProgress(ctx context.Context, tx sqlx.ExtContext,
+func (r *courseProgressRepository) BatchDecrementCourseProgress(ctx context.Context, txWrapper database.ITransaction,
 	courseID uuid.UUID, contentID uuid.UUID, contentType string) error {
-	if tx == nil {
-		tx = r.db
-	}
+	tx := txWrapper.GetTx()
 
 	var query string
 	if contentType == "video" {

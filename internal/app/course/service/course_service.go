@@ -12,26 +12,30 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"github.com/nathakusuma/elevateu-backend/pkg/uuidpkg"
 )
 
 type courseService struct {
-	repo     contract.ICourseRepository
-	fileUtil fileutil.IFileUtil
-	uuid     uuidpkg.IUUID
+	repo      contract.ICourseRepository
+	fileUtil  fileutil.IFileUtil
+	txManager database.ITransactionManager
+	uuid      uuidpkg.IUUID
 }
 
 func NewCourseService(
 	repo contract.ICourseRepository,
 	fileUtil fileutil.IFileUtil,
+	txManager database.ITransactionManager,
 	uuid uuidpkg.IUUID,
 ) contract.ICourseService {
 	return &courseService{
-		repo:     repo,
-		fileUtil: fileUtil,
-		uuid:     uuid,
+		repo:      repo,
+		fileUtil:  fileUtil,
+		txManager: txManager,
+		uuid:      uuid,
 	}
 }
 
@@ -160,21 +164,14 @@ func (s *courseService) UpdateCourse(ctx context.Context, id uuid.UUID, req *dto
 		TeacherName: req.TeacherName,
 	}
 
-	tx, err := s.repo.BeginTx()
+	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseService][UpdateCourse] Failed to begin transaction")
 		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
-	defer func() {
-		err = tx.Rollback()
-		if err != nil {
-			log.Error(map[string]interface{}{
-				"error": err,
-			}, "[CourseService][UpdateCourse] Failed to rollback transaction")
-		}
-	}()
+	defer tx.Rollback()
 
 	err = s.repo.UpdateCourse(ctx, tx, updates)
 	if err != nil {
@@ -218,21 +215,14 @@ func (s *courseService) UpdateCourse(ctx context.Context, id uuid.UUID, req *dto
 }
 
 func (s *courseService) DeleteCourse(ctx context.Context, id uuid.UUID) error {
-	tx, err := s.repo.BeginTx()
+	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseService][DeleteCourse] Failed to begin transaction")
 		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
-	defer func() {
-		err = tx.Rollback()
-		if err != nil {
-			log.Error(map[string]interface{}{
-				"error": err,
-			}, "[CourseService][DeleteCourse] Failed to rollback transaction")
-		}
-	}()
+	defer tx.Rollback()
 
 	err = s.repo.DeleteCourse(ctx, tx, id)
 	if err != nil {

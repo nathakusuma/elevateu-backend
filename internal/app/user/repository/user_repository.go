@@ -15,6 +15,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/pkg/sqlutil"
 )
 
@@ -386,7 +387,10 @@ func (r *userRepository) deleteUser(ctx context.Context, tx sqlx.ExtContext, id 
 	return nil
 }
 
-func (r *userRepository) AddPoint(ctx context.Context, tx sqlx.ExtContext, userID uuid.UUID, point int) error {
+func (r *userRepository) AddPoint(ctx context.Context, txWrapper database.ITransaction, userID uuid.UUID,
+	point int) error {
+	tx := txWrapper.GetTx()
+
 	_, err := tx.ExecContext(ctx, `UPDATE students SET point = point + $1 WHERE user_id = $2`, point, userID)
 	if err != nil {
 		return fmt.Errorf("failed to add point: %w", err)

@@ -15,6 +15,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/pkg/sqlutil"
 )
 
@@ -26,10 +27,6 @@ func NewCourseRepository(conn *sqlx.DB) contract.ICourseRepository {
 	return &courseRepository{
 		db: conn,
 	}
-}
-
-func (r *courseRepository) BeginTx() (*sqlx.Tx, error) {
-	return r.db.Beginx()
 }
 
 func (r *courseRepository) CreateCourse(ctx context.Context, course *entity.Course) error {
@@ -214,10 +211,9 @@ func (r *courseRepository) GetCourses(ctx context.Context, query dto.GetCoursesQ
 	}
 }
 
-func (r *courseRepository) UpdateCourse(ctx context.Context, tx sqlx.ExtContext, updates *dto.CourseUpdate) error {
-	if tx == nil {
-		tx = r.db
-	}
+func (r *courseRepository) UpdateCourse(ctx context.Context, txWrapper database.ITransaction,
+	updates *dto.CourseUpdate) error {
+	tx := txWrapper.GetTx()
 
 	builder := sqlutil.NewSQLUpdateBuilder("courses").
 		WithUpdatedAt().
@@ -254,10 +250,8 @@ func (r *courseRepository) UpdateCourse(ctx context.Context, tx sqlx.ExtContext,
 	return nil
 }
 
-func (r *courseRepository) DeleteCourse(ctx context.Context, tx sqlx.ExtContext, id uuid.UUID) error {
-	if tx == nil {
-		tx = r.db
-	}
+func (r *courseRepository) DeleteCourse(ctx context.Context, txWrapper database.ITransaction, id uuid.UUID) error {
+	tx := txWrapper.GetTx()
 
 	query := "DELETE FROM courses WHERE id = $1"
 

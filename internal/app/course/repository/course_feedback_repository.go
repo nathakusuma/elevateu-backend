@@ -13,6 +13,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/pkg/sqlutil"
 )
 
@@ -26,15 +27,9 @@ func NewCourseFeedbackRepository(conn *sqlx.DB) contract.ICourseFeedbackReposito
 	}
 }
 
-func (r *courseFeedbackRepository) BeginTx(ctx context.Context) (*sqlx.Tx, error) {
-	return r.db.BeginTxx(ctx, nil)
-}
-
-func (r *courseFeedbackRepository) CreateFeedback(ctx context.Context, tx sqlx.ExtContext,
+func (r *courseFeedbackRepository) CreateFeedback(ctx context.Context, txWrapper database.ITransaction,
 	feedback *entity.CourseFeedback) error {
-	if tx == nil {
-		tx = r.db
-	}
+	tx := txWrapper.GetTx()
 
 	query := `
 		INSERT INTO course_feedbacks (
@@ -163,11 +158,9 @@ func (r *courseFeedbackRepository) GetFeedbackByID(ctx context.Context,
 	return &feedback, nil
 }
 
-func (r *courseFeedbackRepository) UpdateFeedback(ctx context.Context, tx sqlx.ExtContext, feedbackID uuid.UUID,
-	updates dto.CourseFeedbackUpdate) error {
-	if tx == nil {
-		tx = r.db
-	}
+func (r *courseFeedbackRepository) UpdateFeedback(ctx context.Context, txWrapper database.ITransaction,
+	feedbackID uuid.UUID, updates dto.CourseFeedbackUpdate) error {
+	tx := txWrapper.GetTx()
 
 	builder := sqlutil.NewSQLUpdateBuilder("course_feedbacks").
 		WithUpdatedAt().
@@ -200,10 +193,9 @@ func (r *courseFeedbackRepository) UpdateFeedback(ctx context.Context, tx sqlx.E
 	return nil
 }
 
-func (r *courseFeedbackRepository) DeleteFeedback(ctx context.Context, tx sqlx.ExtContext, feedbackID uuid.UUID) error {
-	if tx == nil {
-		tx = r.db
-	}
+func (r *courseFeedbackRepository) DeleteFeedback(ctx context.Context, txWrapper database.ITransaction,
+	feedbackID uuid.UUID) error {
+	tx := txWrapper.GetTx()
 
 	query := "DELETE FROM course_feedbacks WHERE id = $1"
 	result, err := tx.ExecContext(ctx, query, feedbackID)
@@ -223,11 +215,9 @@ func (r *courseFeedbackRepository) DeleteFeedback(ctx context.Context, tx sqlx.E
 	return nil
 }
 
-func (r *courseFeedbackRepository) UpdateCourseRating(ctx context.Context, tx sqlx.ExtContext, courseID uuid.UUID,
-	count int64, rating, total float64) error {
-	if tx == nil {
-		tx = r.db
-	}
+func (r *courseFeedbackRepository) UpdateCourseRating(ctx context.Context, txWrapper database.ITransaction,
+	courseID uuid.UUID, count int64, rating, total float64) error {
+	tx := txWrapper.GetTx()
 
 	query := `
 		UPDATE courses

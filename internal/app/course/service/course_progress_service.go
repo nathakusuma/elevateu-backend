@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -12,41 +10,38 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/pkg/log"
 )
 
 type courseProgressService struct {
-	repo     contract.ICourseProgressRepository
-	userRepo contract.IUserRepository
+	repo      contract.ICourseProgressRepository
+	txManager database.ITransactionManager
+	userRepo  contract.IUserRepository
 }
 
 func NewCourseProgressService(
 	progressRepo contract.ICourseProgressRepository,
+	txManager database.ITransactionManager,
 	userRepo contract.IUserRepository,
 ) contract.ICourseProgressService {
 	return &courseProgressService{
-		repo:     progressRepo,
-		userRepo: userRepo,
+		repo:      progressRepo,
+		txManager: txManager,
+		userRepo:  userRepo,
 	}
 }
 
 func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, studentID, videoID uuid.UUID,
 	req dto.UpdateCourseVideoProgressRequest) error {
-	tx, err := s.repo.BeginTx()
+	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseProgressService][UpdateVideoProgress] Failed to begin transaction")
 		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
-	defer func() {
-		err = tx.Rollback()
-		if err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.Error(map[string]interface{}{
-				"error": err,
-			}, "[CourseProgressService][UpdateVideoProgress] Failed to rollback transaction")
-		}
-	}()
+	defer tx.Rollback()
 
 	courseID, err := s.repo.GetContentCourseID(ctx, videoID, "video")
 	if err != nil {
@@ -114,21 +109,14 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 
 func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, studentID uuid.UUID,
 	materialID uuid.UUID) error {
-	tx, err := s.repo.BeginTx()
+	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseProgressService][UpdateMaterialProgress] Failed to begin transaction")
 		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
-	defer func() {
-		err = tx.Rollback()
-		if err != nil {
-			log.Error(map[string]interface{}{
-				"error": err,
-			}, "[CourseProgressService][UpdateMaterialProgress] Failed to rollback transaction")
-		}
-	}()
+	defer tx.Rollback()
 
 	courseID, err := s.repo.GetContentCourseID(ctx, materialID, "material")
 	if err != nil {
@@ -138,7 +126,7 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
-			"material_id": materialID,
+			"material.id": materialID,
 		}, "[CourseProgressService][UpdateMaterialProgress] Failed to get course ID for material")
 		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
@@ -152,8 +140,8 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
-			"student_id":  studentID,
-			"material_id": materialID,
+			"student.id":  studentID,
+			"material.id": materialID,
 		}, "[CourseProgressService][UpdateMaterialProgress] Failed to update material progress")
 		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
@@ -164,8 +152,8 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 		if err != nil {
 			traceID := log.ErrorWithTraceID(map[string]interface{}{
 				"error":      err,
-				"course_id":  courseID,
-				"student_id": studentID,
+				"course.id":  courseID,
+				"student.id": studentID,
 			}, "[CourseProgressService][UpdateMaterialProgress] Failed to update course progress")
 			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 		}
@@ -175,7 +163,7 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 			if err = s.userRepo.AddPoint(ctx, tx, studentID, 50); err != nil {
 				traceID := log.ErrorWithTraceID(map[string]interface{}{
 					"error":      err,
-					"student_id": studentID,
+					"student.id": studentID,
 				}, "[CourseProgressService][UpdateMaterialProgress] Failed to add points to student")
 				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 			}

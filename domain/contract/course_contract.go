@@ -3,22 +3,20 @@ package contract
 import (
 	"context"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 )
 
 type ICourseRepository interface {
-	BeginTx() (*sqlx.Tx, error)
 	CreateCourse(ctx context.Context, course *entity.Course) error
 	GetCourseByID(ctx context.Context, id uuid.UUID) (*entity.Course, error)
 	GetCourses(ctx context.Context, query dto.GetCoursesQuery,
 		pageReq dto.PaginationRequest) ([]*entity.Course, dto.PaginationResponse, error)
-	UpdateCourse(ctx context.Context, tx sqlx.ExtContext, updates *dto.CourseUpdate) error
-	DeleteCourse(ctx context.Context, tx sqlx.ExtContext, id uuid.UUID) error
+	UpdateCourse(ctx context.Context, txWrapper database.ITransaction, updates *dto.CourseUpdate) error
+	DeleteCourse(ctx context.Context, txWrapper database.ITransaction, id uuid.UUID) error
 
 	CreateEnrollment(ctx context.Context, courseID, studentID uuid.UUID) error
 	GetEnrolledCourses(ctx context.Context, studentID uuid.UUID,

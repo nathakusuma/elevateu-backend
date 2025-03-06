@@ -11,6 +11,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"github.com/nathakusuma/elevateu-backend/pkg/uuidpkg"
@@ -20,6 +21,7 @@ type courseFeedbackService struct {
 	repo       contract.ICourseFeedbackRepository
 	courseRepo contract.ICourseRepository
 	fileUtil   fileutil.IFileUtil
+	txManager  database.ITransactionManager
 	uuid       uuidpkg.IUUID
 }
 
@@ -27,12 +29,14 @@ func NewCourseFeedbackService(
 	courseFeedbackRepo contract.ICourseFeedbackRepository,
 	courseRepo contract.ICourseRepository,
 	fileUtil fileutil.IFileUtil,
+	txManager database.ITransactionManager,
 	uuid uuidpkg.IUUID,
 ) contract.ICourseFeedbackService {
 	return &courseFeedbackService{
 		repo:       courseFeedbackRepo,
 		courseRepo: courseRepo,
 		fileUtil:   fileUtil,
+		txManager:  txManager,
 		uuid:       uuid,
 	}
 }
@@ -44,7 +48,7 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 		return errorpkg.ErrInvalidBearerToken
 	}
 
-	tx, err := s.repo.BeginTx(ctx)
+	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
@@ -197,7 +201,7 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 		return errorpkg.ErrForbiddenUser.WithDetail("You can only update your own feedback")
 	}
 
-	tx, err := s.repo.BeginTx(ctx)
+	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
@@ -300,7 +304,7 @@ func (s *courseFeedbackService) DeleteFeedback(ctx context.Context, feedbackID u
 		return errorpkg.ErrForbiddenUser.WithDetail("You can only delete your own feedback")
 	}
 
-	tx, err := s.repo.BeginTx(ctx)
+	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
