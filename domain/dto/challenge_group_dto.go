@@ -12,7 +12,7 @@ type ChallengeGroupResponse struct {
 	ID             uuid.UUID `json:"id"`
 	Title          string    `json:"title,omitempty"`
 	Description    string    `json:"description,omitempty"`
-	ChallengeCount int       `json:"challenge_count,omitempty"`
+	ChallengeCount *int      `json:"challenge_count,omitempty"`
 	ThumbnailURL   string    `json:"thumbnail_url,omitempty"`
 }
 
@@ -21,7 +21,7 @@ func (r *ChallengeGroupResponse) PopulateFromEntity(cg *entity.ChallengeGroup,
 	r.ID = cg.ID
 	r.Title = cg.Title
 	r.Description = cg.Description
-	r.ChallengeCount = cg.ChallengeCount
+	r.ChallengeCount = &cg.ChallengeCount
 
 	var err error
 	r.ThumbnailURL, err = urlSigner("challenge_groups/thumbnail/" + cg.ID.String())
