@@ -323,7 +323,7 @@ func (r *courseRepository) GetEnrolledCourses(ctx context.Context, studentID uui
           ce.content_completed AS "enrollment.content_completed",
           ce.is_completed AS "enrollment.is_completed"
        FROM courses c
-       LEFT JOIN categories cat ON c.category_id = cat.id
+       JOIN categories cat ON c.category_id = cat.id
        JOIN course_enrollments ce ON c.id = ce.course_id
        WHERE ce.student_id = $1
     `
