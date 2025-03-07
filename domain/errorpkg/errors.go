@@ -94,3 +94,13 @@ var (
 		"student-already-submitted-feedback",
 		"You have already submitted feedback for this course.")
 )
+
+// Challenges
+var (
+	ErrStudentAlreadySubmittedChallenge = NewError(http.StatusConflict,
+		"student-already-submitted-challenge",
+		"You have already submitted for this challenge.")
+	ErrMentorAlreadySubmittedFeedback = NewError(http.StatusConflict,
+		"mentor-already-submitted-feedback",
+		"A mentor has already submitted feedback for this submission.")
+)

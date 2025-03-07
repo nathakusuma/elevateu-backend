@@ -119,6 +119,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	courseFeedbackRepository := courserepo.NewCourseFeedbackRepository(db)
 	challengeGroupRepository := challengerepo.NewChallengeGroupRepository(db)
 	challengeRepository := challengerepo.NewChallengeRepository(db)
+	challengeSubmissionRepository := challengerepo.NewChallengeSubmissionRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, cache, fileUtil, jwtAccess,
@@ -134,6 +135,8 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 		txManager, uuidInstance)
 	challengeGroupService := challengesvc.NewChallengeGroupService(challengeGroupRepository, fileUtil, uuidInstance)
 	challengeService := challengesvc.NewChallengeService(challengeRepository, fileUtil, uuidInstance)
+	challengeSubmissionService := challengesvc.NewChallengeSubmissionService(challengeSubmissionRepository,
+		challengeRepository, userRepository, txManager, fileUtil, uuidInstance)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
 	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
@@ -145,4 +148,5 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	coursehnd.InitCourseFeedbackHandler(v1, middlewareInstance, validatorInstance, courseFeedbackService)
 	challengehnd.InitChallengeGroupHandler(v1, middlewareInstance, validatorInstance, challengeGroupService)
 	challengehnd.InitChallengeHandler(v1, middlewareInstance, validatorInstance, challengeService)
+	challengehnd.InitChallengeSubmissionHandler(v1, middlewareInstance, validatorInstance, challengeSubmissionService)
 }
