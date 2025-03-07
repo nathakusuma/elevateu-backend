@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -83,21 +84,80 @@ func (r *challengeSubmissionRepository) GetSubmissionByID(ctx context.Context,
 	return submission, nil
 }
 
-func (r *challengeSubmissionRepository) GetSubmissionByStudent(ctx context.Context, challengeID,
-	studentID uuid.UUID) (*entity.ChallengeSubmission, error) {
-	query := `
-		SELECT cs.id, cs.challenge_id, cs.student_id, cs.url, cs.created_at,
-			u.id as "student.id", u.name as "student.name", u.has_avatar as "student.has_avatar"
-		FROM challenge_submissions cs
-		JOIN users u ON cs.student_id = u.id
-		WHERE cs.challenge_id = $1 AND cs.student_id = $2
-	`
+type submissionWithFeedback struct {
+	ID          uuid.UUID `db:"id"`
+	ChallengeID uuid.UUID `db:"challenge_id"`
+	StudentID   uuid.UUID `db:"student_id"`
+	URL         string    `db:"url"`
+	CreatedAt   time.Time `db:"created_at"`
 
+	StudentName      string `db:"student.name"`
+	StudentHasAvatar bool   `db:"student.has_avatar"`
+
+	FeedbackSubmissionID sql.NullString `db:"feedback.submission_id"`
+	FeedbackMentorID     sql.NullString `db:"feedback.mentor_id"`
+	FeedbackScore        sql.NullInt64  `db:"feedback.score"`
+	FeedbackText         sql.NullString `db:"feedback.feedback"`
+	FeedbackCreatedAt    sql.NullTime   `db:"feedback.created_at"`
+
+	MentorID        sql.NullString `db:"feedback.mentor.id"`
+	MentorName      sql.NullString `db:"feedback.mentor.name"`
+	MentorHasAvatar sql.NullBool   `db:"feedback.mentor.has_avatar"`
+}
+
+func mapToSubmission(sr *submissionWithFeedback) *entity.ChallengeSubmission {
 	submission := &entity.ChallengeSubmission{
-		Student: &entity.User{},
+		ID:          sr.ID,
+		ChallengeID: sr.ChallengeID,
+		StudentID:   sr.StudentID,
+		URL:         sr.URL,
+		CreatedAt:   sr.CreatedAt,
+		Student: &entity.User{
+			ID:        sr.StudentID,
+			Name:      sr.StudentName,
+			HasAvatar: sr.StudentHasAvatar,
+		},
 	}
 
-	err := r.db.GetContext(ctx, submission, query, challengeID, studentID)
+	if sr.FeedbackSubmissionID.Valid {
+		feedbackID, _ := uuid.Parse(sr.FeedbackSubmissionID.String)
+		mentorID, _ := uuid.Parse(sr.MentorID.String)
+
+		submission.Feedback = &entity.ChallengeSubmissionFeedback{
+			SubmissionID: feedbackID,
+			MentorID:     mentorID,
+			Score:        int(sr.FeedbackScore.Int64),
+			Feedback:     sr.FeedbackText.String,
+			CreatedAt:    sr.FeedbackCreatedAt.Time,
+			Mentor: &entity.User{
+				ID:        mentorID,
+				Name:      sr.MentorName.String,
+				HasAvatar: sr.MentorHasAvatar.Bool,
+			},
+		}
+	}
+
+	return submission
+}
+
+func (r *challengeSubmissionRepository) GetSubmissionByStudent(ctx context.Context, challengeID,
+	studentID uuid.UUID) (*entity.ChallengeSubmission, error) {
+
+	query := `
+        SELECT cs.id, cs.challenge_id, cs.student_id, cs.url, cs.created_at,
+            u.name as "student.name", u.has_avatar as "student.has_avatar",
+            f.submission_id as "feedback.submission_id", f.mentor_id as "feedback.mentor_id",
+            f.score as "feedback.score", f.feedback as "feedback.feedback", f.created_at as "feedback.created_at",
+            m.id as "feedback.mentor.id", m.name as "feedback.mentor.name", m.has_avatar as "feedback.mentor.has_avatar"
+        FROM challenge_submissions cs
+        JOIN users u ON cs.student_id = u.id
+        LEFT JOIN challenge_submission_feedbacks f ON cs.id = f.submission_id
+        LEFT JOIN users m ON f.mentor_id = m.id
+        WHERE cs.challenge_id = $1 AND cs.student_id = $2
+    `
+
+	var result submissionWithFeedback
+	err := r.db.GetContext(ctx, &result, query, challengeID, studentID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("submission not found")
@@ -105,48 +165,27 @@ func (r *challengeSubmissionRepository) GetSubmissionByStudent(ctx context.Conte
 		return nil, fmt.Errorf("failed to get submission: %w", err)
 	}
 
-	// Fetch feedback if it exists
-	feedbackQuery := `
-		SELECT f.submission_id, f.mentor_id, f.score, f.feedback, f.created_at,
-			u.id as "mentor.id", u.name as "mentor.name", u.has_avatar as "mentor.has_avatar"
-		FROM challenge_submission_feedbacks f
-		JOIN users u ON f.mentor_id = u.id
-		WHERE f.submission_id = (
-			SELECT id
-			FROM challenge_submissions
-			WHERE challenge_id = $1 AND student_id = $2
-		)
-	`
-
-	feedback := &entity.ChallengeSubmissionFeedback{
-		Mentor: &entity.User{},
-	}
-
-	err = r.db.GetContext(ctx, feedback, feedbackQuery, challengeID, studentID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("failed to get submission feedback: %w", err)
-	}
-
-	if !errors.Is(err, sql.ErrNoRows) {
-		submission.Feedback = feedback
-	}
-
-	return submission, nil
+	return mapToSubmission(&result), nil
 }
 
 func (r *challengeSubmissionRepository) GetSubmissionsByChallenge(ctx context.Context, challengeID uuid.UUID,
 	pageReq dto.PaginationRequest) ([]*entity.ChallengeSubmission, dto.PaginationResponse, error) {
+
 	baseQuery := `
-		SELECT cs.id, cs.challenge_id, cs.student_id, cs.url, cs.created_at,
-			u.id as "student.id", u.name as "student.name", u.has_avatar as "student.has_avatar"
-		FROM challenge_submissions cs
-		JOIN users u ON cs.student_id = u.id
-		WHERE cs.challenge_id = $1
-	`
+        SELECT cs.id, cs.challenge_id, cs.student_id, cs.url, cs.created_at,
+            u.name as "student.name", u.has_avatar as "student.has_avatar",
+            f.submission_id as "feedback.submission_id", f.mentor_id as "feedback.mentor_id",
+            f.score as "feedback.score", f.feedback as "feedback.feedback", f.created_at as "feedback.created_at",
+            m.id as "feedback.mentor.id", m.name as "feedback.mentor.name", m.has_avatar as "feedback.mentor.has_avatar"
+        FROM challenge_submissions cs
+        JOIN users u ON cs.student_id = u.id
+        LEFT JOIN challenge_submission_feedbacks f ON cs.id = f.submission_id
+        LEFT JOIN users m ON f.mentor_id = m.id
+        WHERE cs.challenge_id = $1
+    `
 
 	var sqlQuery string
 	var args []interface{}
-
 	args = append(args, challengeID)
 
 	if pageReq.Cursor != uuid.Nil {
@@ -176,76 +215,26 @@ func (r *challengeSubmissionRepository) GetSubmissionsByChallenge(ctx context.Co
 
 	var submissions []*entity.ChallengeSubmission
 	for rows.Next() {
-		submission := &entity.ChallengeSubmission{
-			Student: &entity.User{},
-		}
-		if err := rows.StructScan(submission); err != nil {
+		var result submissionWithFeedback
+		if err := rows.StructScan(&result); err != nil {
 			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to scan submission row: %w", err)
 		}
-		submissions = append(submissions, submission)
+
+		submissions = append(submissions, mapToSubmission(&result))
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, dto.PaginationResponse{}, fmt.Errorf("error iterating over submission rows: %w", err)
 	}
 
-	hasMore := false
-	if len(submissions) > pageReq.Limit {
-		hasMore = true
+	hasMore := len(submissions) > pageReq.Limit
+	if hasMore {
 		submissions = submissions[:pageReq.Limit]
 	}
 
 	if pageReq.Direction == "prev" && pageReq.Cursor != uuid.Nil {
 		for i, j := 0, len(submissions)-1; i < j; i, j = i+1, j-1 {
 			submissions[i], submissions[j] = submissions[j], submissions[i]
-		}
-	}
-
-	if len(submissions) > 0 {
-		feedbackQuery := `
-			SELECT f.submission_id, f.mentor_id, f.score, f.feedback, f.created_at,
-				u.id as "mentor.id", u.name as "mentor.name", u.has_avatar as "mentor.has_avatar"
-			FROM challenge_submission_feedbacks f
-			JOIN users u ON f.mentor_id = u.id
-			WHERE f.submission_id IN (
-				SELECT id FROM challenge_submissions
-				WHERE challenge_id = $1 AND student_id = ANY($2)
-			)
-		`
-
-		studentIDs := make([]uuid.UUID, len(submissions))
-		submissionMap := make(map[string]*entity.ChallengeSubmission)
-
-		for i, sub := range submissions {
-			studentIDs[i] = sub.StudentID
-			submissionMap[sub.ID.String()] = sub
-		}
-
-		feedbackRows, err := r.db.QueryxContext(ctx, feedbackQuery, challengeID, studentIDs)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to get submission feedbacks: %w", err)
-		}
-
-		if err == nil {
-			defer feedbackRows.Close()
-
-			for feedbackRows.Next() {
-				feedback := &entity.ChallengeSubmissionFeedback{
-					Mentor: &entity.User{},
-				}
-				if err := feedbackRows.StructScan(feedback); err != nil {
-					return nil, dto.PaginationResponse{}, fmt.Errorf("failed to scan feedback row: %w", err)
-				}
-
-				// Find the corresponding submission and attach the feedback
-				if sub, ok := submissionMap[feedback.SubmissionID.String()]; ok {
-					sub.Feedback = feedback
-				}
-			}
-
-			if err := feedbackRows.Err(); err != nil {
-				return nil, dto.PaginationResponse{}, fmt.Errorf("error iterating over feedback rows: %w", err)
-			}
 		}
 	}
 
