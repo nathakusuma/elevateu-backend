@@ -332,6 +332,126 @@ components:
           examples:
             - "https://elevateu.nathakusuma.com/assets/student_avatar.jpg"
 
+    ChallengeDifficulty:
+      type: string
+      enum: [ beginner, intermediate, advanced ]
+
+    ChallengeGroup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        title:
+          type: string
+          examples:
+            - "Data Structures and Algorithms"
+        description:
+          type: string
+          examples:
+            - "Practice and improve your algorithm skills with these challenges."
+        challenge_count:
+          type: integer
+          examples:
+            - 15
+        thumbnail_url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/challenge_thumbnail.jpg"
+
+    Challenge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        title:
+          type: string
+          examples:
+            - "Two Sum Problem"
+        subtitle:
+          type: string
+          examples:
+            - "Find indices of two numbers that add up to target"
+        description:
+          type: string
+          examples:
+            - "Given an array of integers, return indices of the two numbers such that they add up to a specific target."
+        difficulty:
+          $ref: '#/components/schemas/ChallengeDifficulty'
+        is_free:
+          type: boolean
+          examples:
+            - false
+        submission_count:
+          type: integer
+          examples:
+            - 42
+        submission_url:
+          type: string
+          format: uri
+          examples:
+            - "https://github.com/username/solution"
+
+    ChallengeSubmission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        url:
+          type: string
+          format: uri
+          examples:
+            - "https://github.com/username/solution"
+        student_name:
+          type: string
+          examples:
+            - "John Doe"
+        student_avatar_url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/student_avatar.jpg"
+        created_at:
+          type: string
+          format: date-time
+        feedback:
+          $ref: '#/components/schemas/ChallengeSubmissionFeedback'
+
+    ChallengeSubmissionFeedback:
+      type: object
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          examples:
+            - 85
+        feedback:
+          type: string
+          examples:
+            - "Great solution! Good time complexity but could improve space usage."
+        mentor_name:
+          type: string
+          examples:
+            - "Jane Smith"
+        mentor_avatar_url:
+          type: string
+          format: uri
+          examples:
+            - "https://elevateu.nathakusuma.com/assets/mentor_avatar.jpg"
+        created_at:
+          type: string
+          format: date-time
+
     PaginationResponse:
       type: object
       properties:
@@ -597,6 +717,43 @@ components:
             status: 409
             instance: "https://elevateu.nathakusuma.com/api/v1/courses/01949e48-9f6b-796b-9611-3c9025493233/enrollments"
 
+    ## Challenges
+    ErrStudentAlreadySubmittedChallenge:
+      description: Student already submitted challenge
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/student-already-submitted-challenge"
+            title: "You have already submitted for this challenge."
+            status: 409
+            instance: "https://elevateu.nathakusuma.com/api/v1/challenges/01949e48-9f6b-796b-9611-3c9025493233/submissions"
+
+    ErrMentorAlreadySubmittedFeedback:
+      description: Mentor already submitted feedback
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/mentor-already-submitted-feedback"
+            title: "A mentor has already submitted feedback for this submission."
+            status: 409
+            instance: "https://elevateu.nathakusuma.com/api/v1/challenges/submissions/01949e48-9f6b-796b-9611-3c9025493233/feedbacks"
+
+    ErrNotSubscribed:
+      description: Not subscribed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/not-subscribed"
+            title: "You're not subscribed to this feature. Please subscribe first."
+            status: 403
+            instance: "https://elevateu.nathakusuma.com/api/v1/challenges/01949e48-9f6b-796b-9611-3c9025493233"
+
     LoginResponse:
       description: Login response
       content:
@@ -634,6 +791,12 @@ tags:
     description: Course feedback operations
   - name: Course Progress
     description: Course progress tracking operations
+  - name: Challenge Groups
+    description: Challenge group management operations
+  - name: Challenges
+    description: Challenge management operations
+  - name: Challenge Submissions
+    description: Challenge submission operations
 
 paths:
   /auth/register/otp:
@@ -2481,5 +2644,707 @@ paths:
           $ref: '#/components/responses/ErrForbiddenUser'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /challenge-groups:
+    post:
+      tags:
+        - Challenge Groups
+      summary: Create New Challenge Group
+      description: Create a new challenge group. Only available to users with admin role.
+      operationId: createChallengeGroup
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - category_id
+                - title
+                - description
+                - thumbnail
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                  examples:
+                    - "01949e48-9f6b-796b-9611-3c9025493233"
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Data Structures and Algorithms"
+                description:
+                  type: string
+                  minLength: 3
+                  maxLength: 1000
+                  examples:
+                    - "Practice and improve your algorithm skills with these challenges."
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: Group thumbnail image (max 2MB, image formats only)
+      responses:
+        '201':
+          description: Success - Challenge group created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - challenge_group
+                properties:
+                  challenge_group:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '413':
+          $ref: '#/components/responses/ErrFileTooLarge'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    get:
+      tags:
+        - Challenge Groups
+      summary: Get Challenge Groups
+      description: Get a list of challenge groups with pagination and optional filtering.
+      operationId: getChallengeGroups
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+          description: Filter by category ID
+        - name: title
+          in: query
+          schema:
+            type: string
+          description: Filter by title (partial match)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - challenge_groups
+                  - pagination
+                properties:
+                  challenge_groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChallengeGroup'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /challenge-groups/{id}:
+    patch:
+      tags:
+        - Challenge Groups
+      summary: Update Challenge Group
+      description: Update a challenge group. Only available to users with admin role.
+      operationId: updateChallengeGroup
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                  examples:
+                    - "01949e48-9f6b-796b-9611-3c9025493233"
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Advanced Algorithms"
+                description:
+                  type: string
+                  minLength: 3
+                  maxLength: 1000
+                  examples:
+                    - "Updated description for algorithm challenges."
+                thumbnail:
+                  type: string
+                  format: binary
+                  description: Group thumbnail image (max 2MB, image formats only)
+      responses:
+        '204':
+          description: Success - Challenge group updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/ErrFileTooLarge'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Challenge Groups
+      summary: Delete Challenge Group
+      description: Delete a challenge group. Only available to users with admin role.
+      operationId: deleteChallengeGroup
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - Challenge group deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /challenges:
+    post:
+      tags:
+        - Challenges
+      summary: Create New Challenge
+      description: Create a new challenge. Only available to users with admin role.
+      operationId: createChallenge
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - group_id
+                - title
+                - subtitle
+                - description
+                - difficulty
+              properties:
+                group_id:
+                  type: string
+                  format: uuid
+                  examples:
+                    - "01949e48-9f6b-796b-9611-3c9025493233"
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Two Sum Problem"
+                subtitle:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                  examples:
+                    - "Find indices of two numbers that add up to target"
+                description:
+                  type: string
+                  minLength: 3
+                  maxLength: 5000
+                  examples:
+                    - "Given an array of integers, return indices of the two numbers such that they add up to a specific target."
+                difficulty:
+                  $ref: '#/components/schemas/ChallengeDifficulty'
+                is_free:
+                  type: boolean
+                  default: false
+                  examples:
+                    - false
+      responses:
+        '201':
+          description: Success - Challenge created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - challenge
+                properties:
+                  challenge:
+                    $ref: '#/components/schemas/Challenge'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    get:
+      tags:
+        - Challenges
+      summary: Get Challenges
+      description: Get a list of challenges with filtering by group and difficulty.
+      operationId: getChallenges
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: group_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+        - name: difficulty
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ChallengeDifficulty'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - challenges
+                  - pagination
+                properties:
+                  challenges:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Challenge'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /challenges/{id}:
+    get:
+      tags:
+        - Challenges
+      summary: Get Challenge by ID
+      description: Get detailed information about a challenge. Requires challenge subscription.
+      operationId: getChallengeById
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - challenge
+                properties:
+                  challenge:
+                    $ref: '#/components/schemas/Challenge'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrNotSubscribed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    patch:
+      tags:
+        - Challenges
+      summary: Update Challenge
+      description: Update a challenge. Only available to users with admin role.
+      operationId: updateChallenge
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                group_id:
+                  type: string
+                  format: uuid
+                  examples:
+                    - "01949e48-9f6b-796b-9611-3c9025493233"
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  examples:
+                    - "Updated Two Sum Problem"
+                subtitle:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                  examples:
+                    - "Updated subtitle"
+                description:
+                  type: string
+                  minLength: 3
+                  maxLength: 5000
+                  examples:
+                    - "Updated description for the challenge."
+                difficulty:
+                  $ref: '#/components/schemas/ChallengeDifficulty'
+                is_free:
+                  type: boolean
+                  examples:
+                    - true
+      responses:
+        '204':
+          description: Success - Challenge updated successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    delete:
+      tags:
+        - Challenges
+      summary: Delete Challenge
+      description: Delete a challenge. Only available to users with admin role.
+      operationId: deleteChallenge
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '204':
+          description: Success - Challenge deleted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /challenges/{challenge_id}/submissions:
+    post:
+      tags:
+        - Challenge Submissions
+      summary: Submit Solution for Challenge
+      description: Submit a solution for a challenge. Only available to users with student role and active Challenge subscription.
+      operationId: createChallengeSubmission
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  examples:
+                    - "https://github.com/username/solution"
+      responses:
+        '201':
+          description: Success - Challenge submission created successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ErrStudentAlreadySubmittedChallenge'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    get:
+      tags:
+        - Challenge Submissions
+      summary: Get Student's Own Submission
+      description: Get the current student's submission for a challenge. Only available to users with student role and active Challenge subscription.
+      operationId: getStudentChallengeSubmission
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - submission
+                properties:
+                  submission:
+                    $ref: '#/components/schemas/ChallengeSubmission'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrNotSubscribed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /challenges/{challenge_id}/submissions/all:
+    get:
+      tags:
+        - Challenge Submissions
+      summary: Get All Submissions for Challenge
+      description: Get all student submissions for a challenge. Only available to users with mentor or admin role.
+      operationId: getAllChallengeSubmissions
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: challenge_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - submissions
+                  - pagination
+                properties:
+                  submissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChallengeSubmission'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /challenges/submissions/{submission_id}/feedbacks:
+    post:
+      tags:
+        - Challenge Submissions
+      summary: Provide Feedback on Submission
+      description: Provide feedback on a student's challenge submission. Only available to users with mentor role.
+      operationId: createChallengeSubmissionFeedback
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - score
+                - feedback
+              properties:
+                score:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  examples:
+                    - 85
+                feedback:
+                  type: string
+                  minLength: 3
+                  maxLength: 1000
+                  examples:
+                    - "Great solution! Good time complexity but could improve space usage."
+      responses:
+        '201':
+          description: Success - Feedback submitted successfully
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ErrMentorAlreadySubmittedFeedback'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
         '500':
           $ref: '#/components/responses/ErrInternalServer'
