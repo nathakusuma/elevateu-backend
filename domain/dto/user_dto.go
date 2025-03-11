@@ -201,5 +201,5 @@ type UpdateMentorRequest struct {
 	CurrentJob     *string `json:"current_job" validate:"omitempty,min=1,max=255"`
 	Company        *string `json:"company" validate:"omitempty,min=1,max=255"`
 	Bio            *string `json:"bio" validate:"omitempty,min=1,max=255"`
-	Gender         *string `json:"gender" validate:"omitempty,oneof=male fenale"`
+	Gender         *string `json:"gender" validate:"omitempty,oneof=male female"`
 }
