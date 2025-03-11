@@ -109,11 +109,11 @@ func (r *userRepository) createMentor(ctx context.Context, tx sqlx.ExtContext, u
 	_, err := tx.ExecContext(
 		ctx,
 		`INSERT INTO mentors (
-			user_id, specialization, experience, price
+			user_id, address, specialization, current_job, company, gender
 		) VALUES (
-			$1, $2, $3, $4
+			$1, $2, $3, $4, $5, $6
 		)`,
-		userID, mentor.Specialization, mentor.Experience, mentor.Price,
+		userID, mentor.Address, mentor.Specialization, mentor.CurrentJob, mentor.Company, mentor.Gender,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create mentor: %w", err)
@@ -140,8 +140,12 @@ func (r *userRepository) getUserByCondition(ctx context.Context, whereClause str
 		s.point,
 		s.subscribed_boost_until,
 		s.subscribed_challenge_until,
+		m.address,
 		m.specialization,
-		m.experience,
+		m.current_job,
+		m.company,
+		m.bio,
+		m.gender,
 		m.rating,
 		m.rating_count,
 		m.rating_total,
@@ -179,8 +183,12 @@ func (r *userRepository) getUserByCondition(ctx context.Context, whereClause str
 		Point                    sql.NullInt64   `db:"point"`
 		SubscribedBoostUntil     sql.NullTime    `db:"subscribed_boost_until"`
 		SubscribedChallengeUntil sql.NullTime    `db:"subscribed_challenge_until"`
+		Address                  sql.NullString  `db:"address"`
 		Specialization           sql.NullString  `db:"specialization"`
-		Experience               sql.NullString  `db:"experience"`
+		CurrentJob               sql.NullString  `db:"current_job"`
+		Company                  sql.NullString  `db:"company"`
+		Bio                      sql.NullString  `db:"bio"`
+		Gender                   sql.NullString  `db:"gender"`
 		Rating                   sql.NullFloat64 `db:"rating"`
 		RatingCount              sql.NullInt64   `db:"rating_count"`
 		RatingTotal              sql.NullFloat64 `db:"rating_total"`
@@ -215,9 +223,18 @@ func (r *userRepository) getUserByCondition(ctx context.Context, whereClause str
 	}
 
 	if user.Role == enum.UserRoleMentor && userJoin.Specialization.Valid {
+		var bio *string
+		if userJoin.Bio.Valid {
+			bio = &userJoin.Bio.String
+		}
+
 		user.Mentor = &entity.Mentor{
+			Address:        userJoin.Address.String,
 			Specialization: userJoin.Specialization.String,
-			Experience:     userJoin.Experience.String,
+			CurrentJob:     userJoin.CurrentJob.String,
+			Company:        userJoin.Company.String,
+			Bio:            bio,
+			Gender:         userJoin.Gender.String,
 			Rating:         userJoin.Rating.Float64,
 			RatingCount:    int(userJoin.RatingCount.Int64),
 			RatingTotal:    userJoin.RatingTotal.Float64,

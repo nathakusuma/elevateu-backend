@@ -31,8 +31,12 @@ type Student struct {
 }
 
 type Mentor struct {
+	Address        string  `db:"address"`
 	Specialization string  `db:"specialization"`
-	Experience     string  `db:"experience"`
+	CurrentJob     string  `db:"current_job"`
+	Company        string  `db:"company"`
+	Bio            *string `db:"bio"`
+	Gender         string  `db:"gender"`
 	Rating         float64 `db:"rating"`
 	RatingCount    int     `db:"rating_count"`
 	RatingTotal    float64 `db:"rating_total"`

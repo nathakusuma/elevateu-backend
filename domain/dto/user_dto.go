@@ -31,11 +31,16 @@ type StudentData struct {
 }
 
 type MentorData struct {
+	Address        string  `json:"address,omitempty"`
 	Specialization string  `json:"specialization,omitempty"`
-	Experience     string  `json:"experience,omitempty"`
+	CurrentJob     string  `json:"current_job,omitempty"`
+	Company        string  `json:"company,omitempty"`
+	Bio            *string `json:"bio,omitempty"`
+	Gender         string  `json:"gender,omitempty"`
 	Rating         float64 `json:"rating,omitempty"`
 	RatingCount    int     `json:"rating_count,omitempty"`
 	Price          int     `json:"price,omitempty"`
+	Balance        int     `json:"balance,omitempty"`
 }
 
 func (u *UserResponse) PopulateFromEntity(user *entity.User,
@@ -77,11 +82,16 @@ func (u *UserResponse) PopulateFromEntity(user *entity.User,
 
 	if user.Mentor != nil {
 		u.Mentor = &MentorData{
+			Address:        user.Mentor.Address,
 			Specialization: user.Mentor.Specialization,
-			Experience:     user.Mentor.Experience,
+			CurrentJob:     user.Mentor.CurrentJob,
+			Company:        user.Mentor.Company,
+			Bio:            user.Mentor.Bio,
+			Gender:         user.Mentor.Gender,
 			Rating:         user.Mentor.Rating,
 			RatingCount:    user.Mentor.RatingCount,
 			Price:          user.Mentor.Price,
+			Balance:        user.Mentor.Balance,
 		}
 	}
 
@@ -113,7 +123,10 @@ func (u *UserResponse) PopulateMinimalFromEntity(user *entity.User,
 	if user.Mentor != nil {
 		u.Mentor = &MentorData{
 			Specialization: user.Mentor.Specialization,
-			Experience:     user.Mentor.Experience,
+			CurrentJob:     user.Mentor.CurrentJob,
+			Company:        user.Mentor.Company,
+			Bio:            user.Mentor.Bio,
+			Gender:         user.Mentor.Gender,
 			Rating:         user.Mentor.Rating,
 			RatingCount:    user.Mentor.RatingCount,
 			Price:          user.Mentor.Price,
@@ -140,8 +153,12 @@ type StudentUpdate struct {
 }
 
 type MentorUpdate struct {
+	Address        *string `db:"address"`
 	Specialization *string `db:"specialization"`
-	Experience     *string `db:"experience"`
+	CurrentJob     *string `db:"current_job"`
+	Company        *string `db:"company"`
+	Bio            *string `db:"bio"`
+	Gender         *string `db:"gender"`
 	Price          *int    `db:"price"`
 }
 
@@ -160,9 +177,11 @@ type CreateStudentRequest struct {
 }
 
 type CreateMentorRequest struct {
-	Specialization string `json:"specialization" validate:"required,min=1,max=255"`
-	Experience     string `json:"experience" validate:"required,min=1,max=1000"`
-	Price          int    `json:"price" validate:"required,min=0"`
+	Address        string `json:"address" validate:"required,min=1,max=255"`
+	Specialization string `json:"specialization" validate:"required,min=1,max=50"`
+	CurrentJob     string `json:"current_job" validate:"required,min=1,max=50"`
+	Company        string `json:"company" validate:"required,min=1,max=50"`
+	Gender         string `json:"gender" validate:"required,oneof=male female"`
 }
 
 type UpdateUserRequest struct {
@@ -177,7 +196,10 @@ type UpdateStudentRequest struct {
 }
 
 type UpdateMentorRequest struct {
+	Address        *string `json:"address" validate:"omitempty,min=1,max=255"`
 	Specialization *string `json:"specialization" validate:"omitempty,min=1,max=255"`
-	Experience     *string `json:"experience" validate:"omitempty,min=1,max=1000"`
-	Price          *int    `json:"price" validate:"omitempty,min=0"`
+	CurrentJob     *string `json:"current_job" validate:"omitempty,min=1,max=255"`
+	Company        *string `json:"company" validate:"omitempty,min=1,max=255"`
+	Bio            *string `json:"bio" validate:"omitempty,min=1,max=255"`
+	Gender         *string `json:"gender" validate:"omitempty,oneof=male fenale"`
 }

@@ -61,8 +61,12 @@ func (r *authRepository) GetAuthSessionByToken(ctx context.Context, token string
         st.point,
         st.subscribed_boost_until,
         st.subscribed_challenge_until,
+        m.address,
         m.specialization,
-        m.experience,
+        m.current_job,
+        m.company,
+        m.bio,
+        m.gender,
         m.rating,
         m.rating_count,
         m.rating_total,
@@ -110,8 +114,12 @@ func (r *authRepository) GetAuthSessionByToken(ctx context.Context, token string
 		SubscribedChallengeUntil sql.NullTime   `db:"subscribed_challenge_until"`
 
 		// Mentor fields
+		Address        sql.NullString  `db:"address"`
 		Specialization sql.NullString  `db:"specialization"`
-		Experience     sql.NullString  `db:"experience"`
+		CurrentJob     sql.NullString  `db:"current_job"`
+		Company        sql.NullString  `db:"company"`
+		Bio            sql.NullString  `db:"bio"`
+		Gender         sql.NullString  `db:"gender"`
 		Rating         sql.NullFloat64 `db:"rating"`
 		RatingCount    sql.NullInt64   `db:"rating_count"`
 		RatingTotal    sql.NullFloat64 `db:"rating_total"`
@@ -143,9 +151,18 @@ func (r *authRepository) GetAuthSessionByToken(ctx context.Context, token string
 	}
 
 	if join.Role == enum.UserRoleMentor && join.Specialization.Valid {
+		var bio *string
+		if join.Bio.Valid {
+			bio = &join.Bio.String
+		}
+
 		user.Mentor = &entity.Mentor{
+			Address:        join.Address.String,
 			Specialization: join.Specialization.String,
-			Experience:     join.Experience.String,
+			CurrentJob:     join.CurrentJob.String,
+			Company:        join.Company.String,
+			Bio:            bio,
+			Gender:         join.Gender.String,
 			Rating:         join.Rating.Float64,
 			RatingCount:    int(join.RatingCount.Int64),
 			RatingTotal:    join.RatingTotal.Float64,

@@ -93,9 +93,11 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 			return uuid.Nil, errorpkg.ErrValidation.Build().WithDetail("Mentor data is required")
 		}
 		user.Mentor = &entity.Mentor{
+			Address:        req.Mentor.Address,
 			Specialization: req.Mentor.Specialization,
-			Experience:     req.Mentor.Experience,
-			Price:          req.Mentor.Price,
+			CurrentJob:     req.Mentor.CurrentJob,
+			Company:        req.Mentor.Company,
+			Gender:         req.Mentor.Gender,
 		}
 	}
 
@@ -224,9 +226,12 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upda
 
 	if req.Mentor != nil {
 		userUpdate.Mentor = &dto.MentorUpdate{
+			Address:        req.Mentor.Address,
 			Specialization: req.Mentor.Specialization,
-			Experience:     req.Mentor.Experience,
-			Price:          req.Mentor.Price,
+			CurrentJob:     req.Mentor.CurrentJob,
+			Company:        req.Mentor.Company,
+			Bio:            req.Mentor.Bio,
+			Gender:         req.Mentor.Gender,
 		}
 	}
 
