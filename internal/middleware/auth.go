@@ -17,7 +17,7 @@ func (m *Middleware) RequireAuthenticated(ctx *fiber.Ctx) error {
 	}
 
 	headerSlice := strings.Split(header, " ")
-	if len(headerSlice) != 2 && headerSlice[0] != "Bearer" {
+	if len(headerSlice) != 2 || headerSlice[0] != "Bearer" {
 		return errorpkg.ErrInvalidBearerToken
 	}
 
