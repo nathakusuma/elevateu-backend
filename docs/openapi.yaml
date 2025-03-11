@@ -36,14 +36,30 @@ components:
     MentorData:
       type: object
       properties:
+        address:
+          type: string
+          examples:
+            - "123 Main Street, Jakarta"
         specialization:
           type: string
           examples:
             - "Backend Development"
-        experience:
+        current_job:
           type: string
           examples:
-            - "5 years working as backend developer at Gojek"
+            - "Senior Developer"
+        company:
+          type: string
+          examples:
+            - "Gojek"
+        bio:
+          type: [ "string", "null" ]
+          examples:
+            - "Experienced backend developer with 5+ years in the industry"
+        gender:
+          type: string
+          examples:
+            - "male"
         rating:
           type: number
           format: float
@@ -57,6 +73,10 @@ components:
           type: integer
           examples:
             - 250000
+        balance:
+          type: integer
+          examples:
+            - 1500000
 
     User:
       type: object
@@ -98,14 +118,31 @@ components:
         mentor:
           type: object
           properties:
+            address:
+              type: string
+              examples:
+                - "123 Main Street, Jakarta"
             specialization:
               type: string
               examples:
                 - "Backend Development"
-            experience:
+            current_job:
               type: string
               examples:
-                - "5 years working as backend developer at Gojek"
+                - "Senior Developer"
+            company:
+              type: string
+              examples:
+                - "Gojek"
+            bio:
+              type: [ "string", "null" ]
+              examples:
+                - "Experienced backend developer with 5+ years in the industry"
+            gender:
+              type: string
+              examples:
+                - "male"
+                - "female"
             rating:
               type: number
               format: float
@@ -155,10 +192,23 @@ components:
               type: string
               examples:
                 - "Backend Development"
-            experience:
+            current_job:
               type: string
               examples:
-                - "5 years working as backend developer at Gojek"
+                - "Senior Developer"
+            company:
+              type: string
+              examples:
+                - "Gojek"
+            bio:
+              type: [ "string", "null" ]
+              examples:
+                - "Experienced backend developer with 5+ years in the industry"
+            gender:
+              type: string
+              examples:
+                - "male"
+                - "female"
             rating:
               type: number
               format: float
@@ -895,27 +945,41 @@ paths:
                 mentor:
                   type: object
                   required:
+                    - address
                     - specialization
-                    - experience
-                    - price
+                    - current_job
+                    - company
+                    - gender
                   properties:
+                    address:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      examples:
+                        - "123 Main Street, Jakarta"
                     specialization:
                       type: string
                       minLength: 1
                       maxLength: 255
                       examples:
                         - "Backend Development"
-                    experience:
+                    current_job:
                       type: string
                       minLength: 1
-                      maxLength: 1000
+                      maxLength: 50
                       examples:
-                        - "5 years working as backend developer at Gojek"
-                    price:
-                      type: integer
-                      minimum: 0
+                        - "Senior Developer"
+                    company:
+                      type: string
+                      minLength: 1
+                      maxLength: 50
                       examples:
-                        - 250000
+                        - "Gojek"
+                    gender:
+                      type: string
+                      enum: [ male, female ]
+                      examples:
+                        - "male"
       responses:
         '201':
           $ref: '#/components/responses/LoginResponse'
@@ -1144,23 +1208,41 @@ paths:
                 mentor:
                   type: object
                   properties:
+                    address:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      examples:
+                        - "123 Main Street, Jakarta"
                     specialization:
                       type: string
                       minLength: 1
                       maxLength: 255
                       examples:
                         - "Backend Development"
-                    experience:
+                    current_job:
                       type: string
                       minLength: 1
-                      maxLength: 1000
+                      maxLength: 255
                       examples:
-                        - "5 years working as backend developer at a Tech Company"
-                    price:
-                      type: integer
-                      minimum: 0
+                        - "Senior Developer"
+                    company:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
                       examples:
-                        - 250000
+                        - "Gojek"
+                    bio:
+                      type: string
+                      minLength: 1
+                      maxLength: 255
+                      examples:
+                        - "Experienced backend developer with 5+ years in the industry"
+                    gender:
+                      type: string
+                      enum: [ male, female ]
+                      examples:
+                        - "male"
       responses:
         '204':
           description: Success - User profile updated successfully
