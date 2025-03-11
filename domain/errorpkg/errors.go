@@ -104,3 +104,17 @@ var (
 		"mentor-already-submitted-feedback",
 		"A mentor has already submitted feedback for this submission.")
 )
+
+var (
+	ErrFailReadMessage = NewError(http.StatusBadRequest,
+		"fail-read-message",
+		"Failed to read message. Please try again.")
+
+	ErrChatExpired = NewError(http.StatusForbidden,
+		"chat-expired",
+		"Chat has expired. Please purchase a new Skill Guidance session.")
+
+	ErrTrialUsed = NewError(http.StatusConflict,
+		"trial-used",
+		"Trial chat has been used. Please purchase Skill Guidance.")
+)

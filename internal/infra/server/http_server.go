@@ -17,6 +17,9 @@ import (
 	coursehnd "github.com/nathakusuma/elevateu-backend/internal/app/course/handler"
 	courserepo "github.com/nathakusuma/elevateu-backend/internal/app/course/repository"
 	coursesvc "github.com/nathakusuma/elevateu-backend/internal/app/course/service"
+	mentoringhnd "github.com/nathakusuma/elevateu-backend/internal/app/mentoring/handler"
+	mentoringrepo "github.com/nathakusuma/elevateu-backend/internal/app/mentoring/repository"
+	mentoringsvc "github.com/nathakusuma/elevateu-backend/internal/app/mentoring/service"
 	paymenthnd "github.com/nathakusuma/elevateu-backend/internal/app/payment/handler"
 	paymentrepo "github.com/nathakusuma/elevateu-backend/internal/app/payment/repository"
 	paymentsvc "github.com/nathakusuma/elevateu-backend/internal/app/payment/service"
@@ -120,6 +123,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	challengeGroupRepository := challengerepo.NewChallengeGroupRepository(db)
 	challengeRepository := challengerepo.NewChallengeRepository(db)
 	challengeSubmissionRepository := challengerepo.NewChallengeSubmissionRepository(db)
+	mentoringRepository := mentoringrepo.NewMentoringRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, cache, fileUtil, jwtAccess,
@@ -137,6 +141,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	challengeService := challengesvc.NewChallengeService(challengeRepository, fileUtil, uuidInstance)
 	challengeSubmissionService := challengesvc.NewChallengeSubmissionService(challengeSubmissionRepository,
 		challengeRepository, userRepository, txManager, fileUtil, uuidInstance)
+	mentoringService := mentoringsvc.NewMentoringService(mentoringRepository, userRepository, uuidInstance)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
 	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
@@ -149,4 +154,5 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	challengehnd.InitChallengeGroupHandler(v1, middlewareInstance, validatorInstance, challengeGroupService)
 	challengehnd.InitChallengeHandler(v1, middlewareInstance, validatorInstance, challengeService)
 	challengehnd.InitChallengeSubmissionHandler(v1, middlewareInstance, validatorInstance, challengeSubmissionService)
+	mentoringhnd.InitMentoringHandler(v1, middlewareInstance, mentoringService, jwtAccess, validatorInstance)
 }

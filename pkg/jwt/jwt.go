@@ -7,11 +7,13 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
+	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 )
 
 type IJwt interface {
 	Create(userID uuid.UUID, role enum.UserRole, isSubscribedBoost, isSubscribedChallenge bool) (string, error)
 	Decode(tokenString string, claims *Claims) error
+	Validate(token string) (ValidateJWTResponse, error)
 }
 
 type Claims struct {
@@ -19,6 +21,13 @@ type Claims struct {
 	Role                  enum.UserRole `json:"role"`
 	IsSubscribedBoost     bool          `json:"is_subscribed_boost"`
 	IsSubscribedChallenge bool          `json:"is_subscribed_challenge"`
+}
+
+type ValidateJWTResponse struct {
+	UserID                uuid.UUID
+	Role                  enum.UserRole
+	IsSubscribedBoost     bool
+	IsSubscribedChallenge bool
 }
 
 type jwtStruct struct {
@@ -70,4 +79,33 @@ func (j *jwtStruct) Decode(tokenString string, claims *Claims) error {
 	}
 
 	return nil
+}
+
+func (j *jwtStruct) Validate(token string) (ValidateJWTResponse, error) {
+	var claims Claims
+	err := j.Decode(token, &claims)
+	if err != nil {
+		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken
+	}
+
+	expirationTime, err := claims.GetExpirationTime()
+	if err != nil {
+		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken
+	}
+
+	if expirationTime.Before(time.Now()) {
+		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken
+	}
+
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken
+	}
+
+	return ValidateJWTResponse{
+		UserID:                userID,
+		Role:                  claims.Role,
+		IsSubscribedBoost:     claims.IsSubscribedBoost,
+		IsSubscribedChallenge: claims.IsSubscribedChallenge,
+	}, nil
 }

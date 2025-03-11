@@ -2,15 +2,12 @@ package middleware
 
 import (
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
-	"github.com/nathakusuma/elevateu-backend/pkg/jwt"
 )
 
 func (m *Middleware) RequireAuthenticated(ctx *fiber.Ctx) error {
@@ -25,25 +22,16 @@ func (m *Middleware) RequireAuthenticated(ctx *fiber.Ctx) error {
 	}
 
 	token := headerSlice[1]
-	var claims jwt.Claims
-	err := m.jwt.Decode(token, &claims)
+
+	validateResp, err := m.jwt.Validate(token)
 	if err != nil {
-		return errorpkg.ErrInvalidBearerToken
+		return err
 	}
 
-	expirationTime, err := claims.GetExpirationTime()
-	if err != nil {
-		return errorpkg.ErrInvalidBearerToken
-	}
-
-	if expirationTime.Before(time.Now()) {
-		return errorpkg.ErrInvalidBearerToken
-	}
-
-	ctx.Locals(ctxkey.UserID, uuid.MustParse(claims.Subject))
-	ctx.Locals(ctxkey.UserRole, claims.Role)
-	ctx.Locals(ctxkey.IsSubscribedBoost, claims.IsSubscribedBoost)
-	ctx.Locals(ctxkey.IsSubscribedChallenge, claims.IsSubscribedChallenge)
+	ctx.Locals(ctxkey.UserID, validateResp.UserID)
+	ctx.Locals(ctxkey.UserRole, validateResp.Role)
+	ctx.Locals(ctxkey.IsSubscribedBoost, validateResp.IsSubscribedBoost)
+	ctx.Locals(ctxkey.IsSubscribedChallenge, validateResp.IsSubscribedChallenge)
 
 	return ctx.Next()
 }
