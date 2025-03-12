@@ -2,31 +2,36 @@ package contract
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 
-	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 )
 
-type IPaymentGateway interface {
-	CreateTransaction(id string, amount int) (string, error)
-	ProcessNotification(ctx context.Context, notificationPayload map[string]interface{},
-		statusUpdateCallback func(context.Context, uuid.UUID, enum.PaymentStatus) error) error
-}
-
 type IPaymentRepository interface {
-	BeginTx() (*sqlx.Tx, error)
-	CreatePayment(ctx context.Context, tx sqlx.ExtContext, payment *entity.Payment,
-		payload []*entity.PaymentPayload) error
-	GetPaymentByID(ctx context.Context, tx sqlx.QueryerContext,
-		id uuid.UUID) (*entity.Payment, []*entity.PaymentPayload, error)
-	UpdatePayment(ctx context.Context, tx sqlx.ExtContext, payment *entity.Payment) error
+	CreatePayment(ctx context.Context, tx database.ITransaction, payment *entity.Payment) error
+	CreateMentorTransactionHistory(ctx context.Context, txWrapper database.ITransaction,
+		mentorTransactionHistory *entity.MentorTransactionHistory) error
+	GetPaymentByID(ctx context.Context, tx database.ITransaction,
+		id uuid.UUID) (*entity.Payment, error)
+	UpdatePayment(ctx context.Context, tx database.ITransaction, payment *entity.Payment) error
+
+	AddBoostSubscription(ctx context.Context, txWrapper database.ITransaction,
+		studentID uuid.UUID, duration time.Duration) error
+	AddChallengeSubscription(ctx context.Context, txWrapper database.ITransaction,
+		studentID uuid.UUID, duration time.Duration) error
+	AddMentorBalance(ctx context.Context, txWrapper database.ITransaction,
+		mentorID uuid.UUID, amount int) error
 }
 
 type IPaymentService interface {
-	CreatePayment(ctx context.Context, req dto.CreatePaymentRequest) (string, error)
-	UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status enum.PaymentStatus) error
+	UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status enum.PaymentStatus, method string) error
+	ProcessNotification(ctx context.Context, notificationPayload map[string]any) error
+
+	PaySkillBoost(ctx context.Context, studentID uuid.UUID) (string, error)
+	PaySkillChallenge(ctx context.Context, studentID uuid.UUID) (string, error)
+	PaySkillGuidance(ctx context.Context, studentID, mentorID uuid.UUID) (string, error)
 }

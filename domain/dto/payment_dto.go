@@ -2,6 +2,7 @@ package dto
 
 import (
 	"github.com/google/uuid"
+
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 )
 
@@ -10,5 +11,5 @@ type CreatePaymentRequest struct {
 	Amount  int
 	Title   string
 	Detail  *string
-	Payload []*entity.PaymentPayload
+	Payload entity.PaymentPayload
 }

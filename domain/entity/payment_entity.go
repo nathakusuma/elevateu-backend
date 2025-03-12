@@ -26,3 +26,12 @@ type PaymentPayload struct {
 	Type enum.PaymentType
 	Data any
 }
+
+type MentorTransactionHistory struct {
+	ID        uuid.UUID `db:"id"`
+	MentorID  uuid.UUID `db:"mentor_id"`
+	Title     string    `db:"title"`
+	Detail    *string   `db:"detail"`
+	Amount    int       `db:"amount"`
+	CreatedAt time.Time `db:"created_at"`
+}

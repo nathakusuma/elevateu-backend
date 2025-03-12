@@ -16,7 +16,7 @@ func RequireSubscription(subscriptionType enum.PaymentType) fiber.Handler {
 		}
 
 		switch subscriptionType {
-		case enum.PaymentTypeCourse:
+		case enum.PaymentTypeBoost:
 			if userRole == enum.UserRoleAdmin {
 				return ctx.Next()
 			}

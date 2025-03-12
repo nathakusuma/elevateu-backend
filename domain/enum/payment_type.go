@@ -3,7 +3,7 @@ package enum
 type PaymentType string
 
 const (
-	PaymentTypeCourse    PaymentType = "course"
-	PaymentTypeMentor    PaymentType = "mentor"
+	PaymentTypeBoost     PaymentType = "boost"
 	PaymentTypeChallenge PaymentType = "challenge"
+	PaymentTypeGuidance  PaymentType = "guidance"
 )

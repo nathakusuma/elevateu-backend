@@ -30,6 +30,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/gcp"
+	"github.com/nathakusuma/elevateu-backend/internal/infra/payment"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
 	"github.com/nathakusuma/elevateu-backend/pkg/bcrypt"
 	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
@@ -104,6 +105,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	uuidInstance := uuidpkg.GetUUID()
 	validatorInstance := validator.NewValidator()
 	middlewareInstance := middleware.NewMiddleware(jwtAccess)
+	midtransPayment := payment.NewMidtrans()
 
 	s.app.Get("/", func(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusOK).SendString("ElevateU Healthy")
@@ -114,7 +116,6 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 
 	userRepository := userrepo.NewUserRepository(db)
 	authRepository := authrepo.NewAuthRepository(db)
-	paymentRepository := paymentrepo.NewPaymentRepository(db, cache)
 	categoryRepository := categoryrepo.NewCategoryRepository(db)
 	courseRepository := courserepo.NewCourseRepository(db)
 	courseContentRepository := courserepo.NewCourseContentRepository(db)
@@ -124,12 +125,11 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	challengeRepository := challengerepo.NewChallengeRepository(db)
 	challengeSubmissionRepository := challengerepo.NewChallengeSubmissionRepository(db)
 	mentoringRepository := mentoringrepo.NewMentoringRepository(db)
+	paymentRepository := paymentrepo.NewPaymentRepository(db)
 
 	userService := usersvc.NewUserService(userRepository, bcryptInstance, fileUtil, uuidInstance)
 	authService := authsvc.NewAuthService(authRepository, userService, bcryptInstance, cache, fileUtil, jwtAccess,
 		mailer, randomGenerator, uuidInstance)
-	midtransService := paymentsvc.NewMidtransService()
-	paymentService := paymentsvc.NewPaymentService(paymentRepository, midtransService, uuidInstance)
 	categoryService := categorysvc.NewCategoryService(categoryRepository, uuidInstance)
 	courseService := coursesvc.NewCourseService(courseRepository, fileUtil, txManager, uuidInstance)
 	courseContentService := coursesvc.NewCourseContentService(courseContentRepository, courseRepository, fileUtil,
@@ -142,10 +142,11 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	challengeSubmissionService := challengesvc.NewChallengeSubmissionService(challengeSubmissionRepository,
 		challengeRepository, userRepository, txManager, fileUtil, uuidInstance)
 	mentoringService := mentoringsvc.NewMentoringService(mentoringRepository, userRepository, uuidInstance)
+	paymentService := paymentsvc.NewPaymentService(paymentRepository, mentoringService, userService, cache,
+		midtransPayment, txManager, uuidInstance)
 
 	userhnd.InitUserHandler(v1, middlewareInstance, validatorInstance, userService)
 	authhnd.InitAuthHandler(v1, middlewareInstance, validatorInstance, authService)
-	paymenthnd.InitPaymentHandler(v1, paymentService, midtransService)
 	categoryhnd.InitCategoryHandler(v1, categoryService, middlewareInstance, validatorInstance)
 	coursehnd.InitCourseHandler(v1, middlewareInstance, validatorInstance, courseService)
 	coursehnd.InitCourseContentHandler(v1, middlewareInstance, validatorInstance, courseContentService)
@@ -155,4 +156,5 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	challengehnd.InitChallengeHandler(v1, middlewareInstance, validatorInstance, challengeService)
 	challengehnd.InitChallengeSubmissionHandler(v1, middlewareInstance, validatorInstance, challengeSubmissionService)
 	mentoringhnd.InitMentoringHandler(v1, middlewareInstance, mentoringService, jwtAccess, validatorInstance)
+	paymenthnd.InitPaymentHandler(v1, paymentService, validatorInstance)
 }

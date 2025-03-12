@@ -2,27 +2,35 @@ package handler
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
+	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
+	"github.com/nathakusuma/elevateu-backend/pkg/validator"
 )
 
 type paymentHandler struct {
-	svc         contract.IPaymentService
-	midtransSvc contract.IPaymentGateway
+	svc contract.IPaymentService
+	val validator.IValidator
 }
 
 func InitPaymentHandler(
 	router fiber.Router,
 	svc contract.IPaymentService,
-	midtransSvc contract.IPaymentGateway,
+	val validator.IValidator,
 ) {
 	handler := paymentHandler{
-		svc:         svc,
-		midtransSvc: midtransSvc,
+		svc: svc,
+		val: val,
 	}
 
 	paymentGroup := router.Group("/payments")
 	paymentGroup.Post("/midtrans/notification", handler.midtransNotification)
+
+	paymentGroup.Post("/skill-boost", handler.paySkillBoost)
+	paymentGroup.Post("/skill-challenge", handler.paySkillChallenge)
+	paymentGroup.Post("/skill-guidance", handler.paySkillGuidance)
 }
 
 func (h *paymentHandler) midtransNotification(ctx *fiber.Ctx) error {
@@ -31,10 +39,68 @@ func (h *paymentHandler) midtransNotification(ctx *fiber.Ctx) error {
 		return errorpkg.ErrFailParseRequest
 	}
 
-	if err := h.midtransSvc.ProcessNotification(ctx.Context(),
-		notificationPayload, h.svc.UpdatePaymentStatus); err != nil {
+	if err := h.svc.ProcessNotification(ctx.Context(), notificationPayload); err != nil {
 		return err
 	}
 
 	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *paymentHandler) paySkillBoost(ctx *fiber.Ctx) error {
+	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	paymentToken, err := h.svc.PaySkillBoost(ctx.Context(), studentID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(map[string]any{
+		"payment_token": paymentToken,
+	})
+}
+
+func (h *paymentHandler) paySkillChallenge(ctx *fiber.Ctx) error {
+	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	paymentToken, err := h.svc.PaySkillChallenge(ctx.Context(), studentID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(map[string]any{
+		"payment_token": paymentToken,
+	})
+}
+
+func (h *paymentHandler) paySkillGuidance(ctx *fiber.Ctx) error {
+	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	var req struct {
+		MentorID uuid.UUID `json:"mentor_id" validate:"required"`
+	}
+	if err := ctx.BodyParser(&req); err != nil {
+		return errorpkg.ErrFailParseRequest
+	}
+
+	if err := h.val.ValidateStruct(req); err != nil {
+		return err
+	}
+
+	paymentToken, err := h.svc.PaySkillGuidance(ctx.Context(), studentID, req.MentorID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(map[string]any{
+		"payment_token": paymentToken,
+	})
 }
