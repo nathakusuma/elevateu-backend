@@ -156,5 +156,5 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	challengehnd.InitChallengeHandler(v1, middlewareInstance, validatorInstance, challengeService)
 	challengehnd.InitChallengeSubmissionHandler(v1, middlewareInstance, validatorInstance, challengeSubmissionService)
 	mentoringhnd.InitMentoringHandler(v1, middlewareInstance, mentoringService, jwtAccess, validatorInstance)
-	paymenthnd.InitPaymentHandler(v1, paymentService, validatorInstance)
+	paymenthnd.InitPaymentHandler(v1, middlewareInstance, paymentService, validatorInstance)
 }

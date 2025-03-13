@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
@@ -98,8 +99,21 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
-	if err := s.cache.Set(ctx, "payment:"+paymentEntity.ID.String(), req.Payload, 1*time.Hour); err != nil {
-		return "", fmt.Errorf("failed to cache payment payload: %w", err)
+	payloadJSON, err := sonic.Marshal(req.Payload)
+	if err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":   err,
+			"request": req,
+		}, "[PaymentService][createPayment] Failed to marshal payment payload")
+		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+	}
+
+	if err := s.cache.Set(ctx, "payment:"+paymentEntity.ID.String(), string(payloadJSON), 1*time.Hour); err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":   err,
+			"request": req,
+		}, "[PaymentService][createPayment] Failed to set payment payload in cache")
+		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -159,8 +173,8 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 	}
 
 	if status == enum.PaymentStatusSuccess {
-		var payload entity.PaymentPayload
-		if err = s.cache.Get(ctx, "payment:"+id.String(), &payload); err != nil {
+		var payloadJSON string
+		if err = s.cache.Get(ctx, "payment:"+id.String(), &payloadJSON); err != nil {
 			traceID := log.ErrorWithTraceID(map[string]interface{}{
 				"error":          err,
 				"payment.id":     id,
@@ -169,96 +183,28 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
 		}
 
+		var payload entity.PaymentPayload
+		if err = sonic.Unmarshal([]byte(payloadJSON), &payload); err != nil {
+			traceID := log.ErrorWithTraceID(map[string]interface{}{
+				"error":          err,
+				"payment.id":     id,
+				"payment.status": status,
+			}, "[PaymentService][UpdatePaymentStatus] Failed to unmarshal payment payload")
+			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		}
+
 		// Triggers
 		switch payload.Type {
 		case enum.PaymentTypeBoost:
-			studentID, ok := payload.Data.(uuid.UUID)
-			if !ok {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
-					"error":          err,
-					"payment.id":     id,
-					"payment.status": status,
-				}, "[PaymentService][UpdatePaymentStatus] Invalid boost subscription data")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
-			}
-			if err = s.repo.AddBoostSubscription(ctx, tx, studentID, time.Hour*24*30); err != nil {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
-					"error":          err,
-					"payment.id":     id,
-					"payment.status": status,
-				}, "[PaymentService][UpdatePaymentStatus] Failed to add boost subscription")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			if err := s.triggerSkillBoost(ctx, tx, payload, paymentEntity); err != nil {
+				return err
 			}
 		case enum.PaymentTypeChallenge:
-			studentID, ok := payload.Data.(uuid.UUID)
-			if !ok {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
-					"error":          err,
-					"payment.id":     id,
-					"payment.status": status,
-				}, "[PaymentService][UpdatePaymentStatus] Invalid challenge subscription data")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
-			}
-			if err = s.repo.AddChallengeSubscription(ctx, tx, studentID, time.Hour*24*30); err != nil {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
-					"error":          err,
-					"payment.id":     id,
-					"payment.status": status,
-				}, "[PaymentService][UpdatePaymentStatus] Failed to add challenge subscription")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			if err := s.triggerSkillChallenge(ctx, tx, payload, paymentEntity); err != nil {
+				return err
 			}
 		case enum.PaymentTypeGuidance:
-			type data struct {
-				StudentID uuid.UUID
-				MentorID  uuid.UUID
-			}
-			d, ok := payload.Data.(data)
-			if !ok {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
-					"error":          err,
-					"payment.id":     id,
-					"payment.status": status,
-				}, "[PaymentService][UpdatePaymentStatus] Invalid guidance subscription data")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
-			}
-
-			student, err := s.userSvc.GetUserByID(ctx, d.StudentID, false)
-			if err != nil {
-				return err
-			}
-
-			mentor, err := s.userSvc.GetUserByID(ctx, d.MentorID, false)
-			if err != nil {
-				return err
-			}
-
-			detail := fmt.Sprintf("Skill Guidance with %s", student.Name)
-			mentorSalary := mentor.Mentor.Price - (mentor.Mentor.Price * 10 / 100) // TODO: berapa persen potongan?
-			if err = s.repo.CreateMentorTransactionHistory(ctx, tx, &entity.MentorTransactionHistory{
-				ID:       id,
-				MentorID: d.MentorID,
-				Title:    "Pembayaran Mentor",
-				Detail:   &detail,
-				Amount:   mentorSalary,
-			}); err != nil {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
-					"error":          err,
-					"payment.id":     id,
-					"payment.status": status,
-				}, "[PaymentService][UpdatePaymentStatus] Failed to create mentor transaction history")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
-			}
-
-			if err = s.repo.AddMentorBalance(ctx, tx, d.MentorID, mentorSalary); err != nil {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
-					"error":          err,
-					"payment.id":     id,
-					"payment.status": status,
-				}, "[PaymentService][UpdatePaymentStatus] Failed to add mentor balance")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
-			}
-
-			if _, err = s.mentoringSvc.CreateChat(ctx, d.MentorID, d.StudentID, false); err != nil {
+			if err := s.triggerSkillGuidance(ctx, tx, payload, paymentEntity); err != nil {
 				return err
 			}
 		}
@@ -328,8 +274,8 @@ func (s *paymentService) PaySkillBoost(ctx context.Context, studentID uuid.UUID)
 		Title:  "Skill Boost Subscription",
 		Detail: &detail,
 		Payload: entity.PaymentPayload{
-			Type: enum.PaymentTypeBoost,
-			Data: studentID,
+			Type:      enum.PaymentTypeBoost,
+			StudentID: studentID,
 		},
 	})
 }
@@ -362,8 +308,8 @@ func (s *paymentService) PaySkillChallenge(ctx context.Context, studentID uuid.U
 		Title:  "Skill Challenge Subscription",
 		Detail: &detail,
 		Payload: entity.PaymentPayload{
-			Type: enum.PaymentTypeChallenge,
-			Data: studentID,
+			Type:      enum.PaymentTypeChallenge,
+			StudentID: studentID,
 		},
 	})
 }
@@ -382,14 +328,104 @@ func (s *paymentService) PaySkillGuidance(ctx context.Context, studentID, mentor
 		Title:  "Skill Guidance Subscription",
 		Detail: &detail,
 		Payload: entity.PaymentPayload{
-			Type: enum.PaymentTypeGuidance,
-			Data: struct {
-				StudentID uuid.UUID
-				MentorID  uuid.UUID
-			}{
-				StudentID: studentID,
-				MentorID:  mentorID,
-			},
+			Type:      enum.PaymentTypeGuidance,
+			StudentID: studentID,
+			MentorID:  mentorID,
 		},
 	})
+}
+
+func (s *paymentService) triggerSkillBoost(ctx context.Context, tx database.ITransaction,
+	payload entity.PaymentPayload, payment *entity.Payment) error {
+	student, err := s.userSvc.GetUserByID(ctx, payload.StudentID, false)
+	if err != nil {
+		return err
+	}
+
+	var subscribedUntil time.Time
+	if student.Student.SubscribedBoostUntil == nil || student.Student.SubscribedBoostUntil.Before(time.Now()) {
+		subscribedUntil = time.Now().Add(time.Hour * 24 * 30)
+	} else {
+		subscribedUntil = student.Student.SubscribedBoostUntil.Add(time.Hour * 24 * 30)
+	}
+
+	if err := s.repo.AddBoostSubscription(ctx, tx, payload.StudentID, subscribedUntil); err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":          err,
+			"payment.id":     payment.ID,
+			"payment.status": payment.Status,
+		}, "[PaymentService][UpdatePaymentStatus] Failed to add boost subscription")
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+	}
+
+	return nil
+}
+
+func (s *paymentService) triggerSkillChallenge(ctx context.Context, tx database.ITransaction,
+	payload entity.PaymentPayload, payment *entity.Payment) error {
+	student, err := s.userSvc.GetUserByID(ctx, payload.StudentID, false)
+	if err != nil {
+		return err
+	}
+
+	var subscribedUntil time.Time
+	if student.Student.SubscribedChallengeUntil == nil || student.Student.SubscribedChallengeUntil.Before(time.Now()) {
+		subscribedUntil = time.Now().Add(time.Hour * 24 * 30)
+	} else {
+		subscribedUntil = student.Student.SubscribedChallengeUntil.Add(time.Hour * 24 * 30)
+	}
+
+	if err := s.repo.AddChallengeSubscription(ctx, tx, payload.StudentID, subscribedUntil); err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"error":          err,
+			"payment.id":     payment.ID,
+			"payment.status": payment.Status,
+		}, "[PaymentService][UpdatePaymentStatus] Failed to add challenge subscription")
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+	}
+
+	return nil
+}
+
+func (s *paymentService) triggerSkillGuidance(ctx context.Context, tx database.ITransaction,
+	payload entity.PaymentPayload, payment *entity.Payment) error {
+	student, err := s.userSvc.GetUserByID(ctx, payload.StudentID, false)
+	if err != nil {
+		return err
+	}
+
+	mentor, err := s.userSvc.GetUserByID(ctx, payload.MentorID, false)
+	if err != nil {
+		return err
+	}
+
+	detail := fmt.Sprintf("Skill Guidance with %s", student.Name)
+	mentorSalary := mentor.Mentor.Price - (mentor.Mentor.Price * 5 / 100) // Potongan 5% untuk ElevateU
+	if err := s.repo.CreateMentorTransactionHistory(ctx, tx, &entity.MentorTransactionHistory{
+		ID:       payment.ID,
+		MentorID: payload.MentorID,
+		Title:    "Pembayaran Mentor",
+		Detail:   &detail,
+		Amount:   mentorSalary,
+	}); err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"payment.id":     payment.ID,
+			"payment.status": payment.Status,
+		}, "[PaymentService][UpdatePaymentStatus] Failed to create mentor transaction history")
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+	}
+
+	if err := s.repo.AddMentorBalance(ctx, tx, payload.MentorID, mentorSalary); err != nil {
+		traceID := log.ErrorWithTraceID(map[string]interface{}{
+			"payment.id":     payment.ID,
+			"payment.status": payment.Status,
+		}, "[PaymentService][UpdatePaymentStatus] Failed to add mentor balance")
+		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+	}
+
+	if _, err := s.mentoringSvc.CreateChat(ctx, payload.MentorID, payload.StudentID, false); err != nil {
+		return err
+	}
+
+	return nil
 }

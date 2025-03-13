@@ -105,6 +105,7 @@ var (
 		"A mentor has already submitted feedback for this submission.")
 )
 
+// Mentoring
 var (
 	ErrFailReadMessage = NewError(http.StatusBadRequest,
 		"fail-read-message",
@@ -117,4 +118,11 @@ var (
 	ErrTrialUsed = NewError(http.StatusConflict,
 		"trial-used",
 		"Trial chat has been used. Please purchase Skill Guidance.")
+)
+
+// Payment
+var (
+	ErrOKIgnore = NewError(http.StatusOK,
+		"ok-ignore",
+		"OK to ignore this error.") // For midtrans test notification
 )

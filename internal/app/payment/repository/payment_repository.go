@@ -44,7 +44,7 @@ func (r *paymentRepository) CreatePayment(ctx context.Context, txWrapper databas
 			:title,
 			:detail,
 			:method,
-			:status
+			:status,
 			:expired_at
 		)
 	`, payment)
@@ -128,13 +128,13 @@ func (r *paymentRepository) UpdatePayment(ctx context.Context, txWrapper databas
 }
 
 func (r *paymentRepository) AddBoostSubscription(ctx context.Context, txWrapper database.ITransaction,
-	studentID uuid.UUID, duration time.Duration) error {
+	studentID uuid.UUID, subscribedUntil time.Time) error {
 	tx := txWrapper.GetTx()
 
 	_, err := tx.ExecContext(ctx, `
-		UPDATE students SET subscribed_boost_until = subscribed_boost_until + $1
+		UPDATE students SET subscribed_boost_until = $1
 		WHERE user_id = $2
-	`, duration, studentID)
+	`, subscribedUntil, studentID)
 
 	if err != nil {
 		return fmt.Errorf("failed to add skill boost subscription: %w", err)
@@ -144,13 +144,13 @@ func (r *paymentRepository) AddBoostSubscription(ctx context.Context, txWrapper 
 }
 
 func (r *paymentRepository) AddChallengeSubscription(ctx context.Context, txWrapper database.ITransaction,
-	studentID uuid.UUID, duration time.Duration) error {
+	studentID uuid.UUID, subscribedUntil time.Time) error {
 	tx := txWrapper.GetTx()
 
 	_, err := tx.ExecContext(ctx, `
-		UPDATE students SET subscribed_challenge_until = subscribed_challenge_until + $1
+		UPDATE students SET subscribed_challenge_until = $1
 		WHERE user_id = $2
-	`, duration, studentID)
+	`, subscribedUntil, studentID)
 
 	if err != nil {
 		return fmt.Errorf("failed to add challenge subscription: %w", err)

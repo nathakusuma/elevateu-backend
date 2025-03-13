@@ -72,7 +72,7 @@ func (p *midtransPayment) ProcessNotification(
 	// 4. Check transaction to Midtrans with param orderId
 	transactionStatusResp, e := coreapi.CheckTransaction(orderId)
 	if e != nil {
-		return "", "", errorpkg.ErrNotFound.WithDetail("transaction not found")
+		return "", "", errorpkg.ErrOKIgnore
 	} else {
 		if transactionStatusResp != nil {
 			// 5. Do set transaction status based on response from check transaction status

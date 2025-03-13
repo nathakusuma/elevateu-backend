@@ -22,11 +22,6 @@ type Payment struct {
 	UpdatedAt time.Time          `db:"updated_at"`
 }
 
-type PaymentPayload struct {
-	Type enum.PaymentType
-	Data any
-}
-
 type MentorTransactionHistory struct {
 	ID        uuid.UUID `db:"id"`
 	MentorID  uuid.UUID `db:"mentor_id"`
@@ -34,4 +29,10 @@ type MentorTransactionHistory struct {
 	Detail    *string   `db:"detail"`
 	Amount    int       `db:"amount"`
 	CreatedAt time.Time `db:"created_at"`
+}
+
+type PaymentPayload struct {
+	Type      enum.PaymentType
+	StudentID uuid.UUID
+	MentorID  uuid.UUID
 }

@@ -20,9 +20,9 @@ type IPaymentRepository interface {
 	UpdatePayment(ctx context.Context, tx database.ITransaction, payment *entity.Payment) error
 
 	AddBoostSubscription(ctx context.Context, txWrapper database.ITransaction,
-		studentID uuid.UUID, duration time.Duration) error
+		studentID uuid.UUID, subscribedUntil time.Time) error
 	AddChallengeSubscription(ctx context.Context, txWrapper database.ITransaction,
-		studentID uuid.UUID, duration time.Duration) error
+		studentID uuid.UUID, subscribedUntil time.Time) error
 	AddMentorBalance(ctx context.Context, txWrapper database.ITransaction,
 		mentorID uuid.UUID, amount int) error
 }

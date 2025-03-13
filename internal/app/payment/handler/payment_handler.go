@@ -6,17 +6,21 @@ import (
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
+	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
+	"github.com/nathakusuma/elevateu-backend/internal/middleware"
 	"github.com/nathakusuma/elevateu-backend/pkg/validator"
 )
 
 type paymentHandler struct {
-	svc contract.IPaymentService
-	val validator.IValidator
+	svc  contract.IPaymentService
+	midw *middleware.Middleware
+	val  validator.IValidator
 }
 
 func InitPaymentHandler(
 	router fiber.Router,
+	midw *middleware.Middleware,
 	svc contract.IPaymentService,
 	val validator.IValidator,
 ) {
@@ -26,11 +30,20 @@ func InitPaymentHandler(
 	}
 
 	paymentGroup := router.Group("/payments")
-	paymentGroup.Post("/midtrans/notification", handler.midtransNotification)
+	paymentGroup.Post("/midtrans/notifications", handler.midtransNotification)
 
-	paymentGroup.Post("/skill-boost", handler.paySkillBoost)
-	paymentGroup.Post("/skill-challenge", handler.paySkillChallenge)
-	paymentGroup.Post("/skill-guidance", handler.paySkillGuidance)
+	paymentGroup.Post("/skill-boost",
+		midw.RequireAuthenticated,
+		midw.RequireOneOfRoles(enum.UserRoleStudent),
+		handler.paySkillBoost)
+	paymentGroup.Post("/skill-challenge",
+		midw.RequireAuthenticated,
+		midw.RequireOneOfRoles(enum.UserRoleStudent),
+		handler.paySkillChallenge)
+	paymentGroup.Post("/skill-guidance",
+		midw.RequireAuthenticated,
+		midw.RequireOneOfRoles(enum.UserRoleStudent),
+		handler.paySkillGuidance)
 }
 
 func (h *paymentHandler) midtransNotification(ctx *fiber.Ctx) error {
