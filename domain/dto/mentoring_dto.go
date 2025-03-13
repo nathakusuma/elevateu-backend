@@ -13,6 +13,7 @@ type ChatResponse struct {
 	MentorID  uuid.UUID `json:"mentor_id"`
 	StudentID uuid.UUID `json:"student_id"`
 	ExpiresAt time.Time `json:"expires_at"`
+	IsTrial   bool      `json:"is_trial"`
 }
 
 func (r *ChatResponse) PopulateFromEntity(chat *entity.MentoringChat) {
@@ -20,6 +21,7 @@ func (r *ChatResponse) PopulateFromEntity(chat *entity.MentoringChat) {
 	r.MentorID = chat.MentorID
 	r.StudentID = chat.StudentID
 	r.ExpiresAt = chat.ExpiresAt
+	r.IsTrial = chat.IsTrial
 }
 
 type MessageResponse struct {

@@ -11,6 +11,7 @@ type MentoringChat struct {
 	MentorID  uuid.UUID `db:"mentor_id"`
 	StudentID uuid.UUID `db:"student_id"`
 	ExpiresAt time.Time `db:"expires_at"`
+	IsTrial   bool      `db:"is_trial"`
 }
 
 type MentoringMessage struct {

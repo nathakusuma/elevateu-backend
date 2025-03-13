@@ -32,11 +32,11 @@ func (r *mentoringRepository) CreateChat(ctx context.Context, chat *entity.Mento
 func (r *mentoringRepository) createChat(ctx context.Context, tx sqlx.ExtContext, chat *entity.MentoringChat) error {
 	query := `
        INSERT INTO mentoring_chats (
-          id, mentor_id, student_id, expires_at
+          id, mentor_id, student_id, expires_at, is_trial
        ) VALUES (
-          :id, :mentor_id, :student_id, :expires_at
+          :id, :mentor_id, :student_id, :expires_at, :is_trial
        )
-       ON CONFLICT ON CONSTRAINT mentoring_chats_student_id_mentor_id_key
+       ON CONFLICT (student_id, mentor_id)
        DO UPDATE SET expires_at = :expires_at
     `
 
@@ -81,7 +81,9 @@ func (r *mentoringRepository) CreateTrialChat(ctx context.Context, chat *entity.
 
 func (r *mentoringRepository) GetChatByID(ctx context.Context, chatID uuid.UUID) (*entity.MentoringChat, error) {
 	query := `
-       SELECT id, student_id, mentor_id, expires_at FROM mentoring_chats WHERE id = $1
+       SELECT id, student_id, mentor_id, expires_at, is_trial
+       FROM mentoring_chats
+       WHERE id = $1
     `
 
 	var chat entity.MentoringChat
@@ -89,6 +91,27 @@ func (r *mentoringRepository) GetChatByID(ctx context.Context, chatID uuid.UUID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("chat not found")
+		}
+		return nil, fmt.Errorf("failed to get chat: %w", err)
+	}
+
+	return &chat, nil
+}
+
+func (r *mentoringRepository) GetChatByMentorAndStudent(ctx context.Context, mentorID,
+	studentID uuid.UUID) (*entity.MentoringChat, error) {
+	query := `
+	   SELECT id, student_id, mentor_id, expires_at, is_trial
+	   FROM mentoring_chats
+	   WHERE mentor_id = $1
+	     AND student_id = $2
+	`
+
+	var chat entity.MentoringChat
+	err := r.db.GetContext(ctx, &chat, query, mentorID, studentID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("chat not found: %w", err)
 		}
 		return nil, fmt.Errorf("failed to get chat: %w", err)
 	}

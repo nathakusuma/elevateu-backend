@@ -71,6 +71,22 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 		return nil, errorpkg.ErrValidation.Build().WithDetail("User is not a student")
 	}
 
+	currentChat, err := s.repo.GetChatByMentorAndStudent(ctx, mentorID, studentID)
+	if err != nil {
+		if !strings.HasPrefix(err.Error(), "chat not found") {
+			traceID := log.ErrorWithTraceID(map[string]interface{}{
+				"error":      err,
+				"mentor.id":  mentorID,
+				"student.id": studentID,
+			}, "[MentoringService][CreateChat] Failed to get chat")
+			return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		}
+	}
+
+	if isTrial && currentChat != nil {
+		return nil, errorpkg.ErrTrialUsed
+	}
+
 	chatID, err := s.uuid.NewV7()
 	if err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -86,11 +102,19 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 		expireDuration = 15 * time.Minute
 	}
 
+	var expiresAt time.Time
+	if currentChat != nil && currentChat.ExpiresAt.After(time.Now()) {
+		expiresAt = currentChat.ExpiresAt.Add(expireDuration)
+	} else {
+		expiresAt = time.Now().Add(expireDuration)
+	}
+
 	chat := &entity.MentoringChat{
 		ID:        chatID,
 		MentorID:  mentorID,
 		StudentID: studentID,
-		ExpiresAt: time.Now().Add(expireDuration),
+		ExpiresAt: expiresAt,
+		IsTrial:   isTrial,
 	}
 
 	var repoErr error
@@ -105,7 +129,7 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 			return nil, errorpkg.ErrTrialUsed
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error": err,
+			"error": repoErr,
 			"chat":  chat,
 		}, "[MentoringService][CreateChat] Failed to create chat")
 		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
@@ -113,6 +137,12 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 
 	response := &dto.ChatResponse{}
 	response.PopulateFromEntity(chat)
+
+	log.Info(map[string]interface{}{
+		"mentor.id":  mentorID,
+		"student.id": studentID,
+		"chat.id":    chatID,
+	}, "[MentoringService][CreateChat] Chat created")
 
 	return response, nil
 }
