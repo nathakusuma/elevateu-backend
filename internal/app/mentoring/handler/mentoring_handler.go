@@ -10,6 +10,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
+	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
 	"github.com/nathakusuma/elevateu-backend/pkg/jwt"
@@ -37,6 +38,11 @@ func InitMentoringHandler(
 
 	mentoringsGroup := router.Group("/mentorings")
 
+	mentoringsGroup.Post("/trial",
+		midw.RequireAuthenticated,
+		midw.RequireOneOfRoles(enum.UserRoleStudent),
+		handler.createTrialChat)
+
 	mentoringsGroup.Post("/chats/:chatId/messages",
 		midw.RequireAuthenticated,
 		handler.sendMessage)
@@ -48,6 +54,31 @@ func InitMentoringHandler(
 		middleware.WebsocketUpgrade,
 		websocket.New(handler.handleWebSocket),
 	)
+}
+
+func (h *mentoringHandler) createTrialChat(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		return errorpkg.ErrInvalidBearerToken
+	}
+
+	var req struct {
+		MentorID uuid.UUID `json:"mentor_id" validate:"required"`
+	}
+	if err := ctx.BodyParser(&req); err != nil {
+		return errorpkg.ErrFailParseRequest
+	}
+
+	if err := h.val.ValidateStruct(req); err != nil {
+		return err
+	}
+
+	chatResp, err := h.svc.CreateChat(ctx.Context(), req.MentorID, userID, true)
+	if err != nil {
+		return err
+	}
+
+	return ctx.Status(fiber.StatusCreated).JSON(chatResp)
 }
 
 func (h *mentoringHandler) sendMessage(ctx *fiber.Ctx) error {
