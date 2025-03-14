@@ -431,6 +431,51 @@ components:
           type: string
           format: date-time
 
+    ChatResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        mentor_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        is_trial:
+          type: boolean
+        mentor_avatar:
+          type: string
+          format: uri
+        student_avatar:
+          type: string
+          format: uri
+        last_message_content:
+          type: string
+        last_message_time:
+          type: string
+          format: date-time
+          nullable: true
+
+    MessageResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
     PaginationResponse:
       type: object
       properties:
@@ -733,6 +778,31 @@ components:
             status: 403
             instance: "https://elevateu.nathakusuma.com/api/v1/challenges/01949e48-9f6b-796b-9611-3c9025493233"
 
+    ## Mentoring
+    ErrTrialUsed:
+      description: Trial chat already used
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/trial-used"
+            title: "You have already used your trial session with this mentor."
+            status: 409
+            instance: "https://elevateu.nathakusuma.com/api/v1/mentorings/trial"
+
+    ErrChatExpired:
+      description: Chat has expired
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: "https://elevateu.nathakusuma.com/errors/chat-expired"
+            title: "This chat session has expired."
+            status: 403
+            instance: "https://elevateu.nathakusuma.com/api/v1/mentorings/chats/01949e48-9f6b-796b-9611-3c9025493233/messages"
+
     LoginResponse:
       description: Login response
       content:
@@ -776,6 +846,8 @@ tags:
     description: Challenge management operations
   - name: Challenge Submissions
     description: Challenge submission operations
+  - name: Mentoring
+    description: Mentoring and chat functionality
 
 paths:
   /auth/register/otp:
@@ -3471,3 +3543,221 @@ paths:
           $ref: '#/components/responses/ErrValidation'
         '500':
           $ref: '#/components/responses/ErrInternalServer'
+
+  /mentorings/trial:
+    post:
+      tags:
+        - Mentoring
+      summary: Create Trial Chat Session
+      description: Create a 15-minute trial chat session with a mentor. Only available to students.
+      operationId: createTrialChat
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mentor_id
+              properties:
+                mentor_id:
+                  type: string
+                  format: uuid
+                  examples:
+                    - "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '201':
+          description: Success - Trial chat created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '409':
+          $ref: '#/components/responses/ErrTrialUsed'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /mentorings/chats/my:
+    get:
+      tags:
+        - Mentoring
+      summary: Get My Chats
+      description: Get all chat sessions for the current user, both as a student and as a mentor.
+      operationId: getMyChats
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - chats
+                properties:
+                  chats:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatResponse'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /mentorings/chats/{chatId}/messages:
+    post:
+      tags:
+        - Mentoring
+      summary: Send Message
+      description: Send a message in a chat session. Available to both students and mentors in the chat.
+      operationId: sendMessage
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                  examples:
+                    - "Hello, I have a question about the course."
+      responses:
+        '201':
+          description: Success - Message sent
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenUser'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+    get:
+      tags:
+        - Mentoring
+      summary: Get Messages
+      description: Get messages from a chat session with pagination. Available to both students and mentors in the chat.
+      operationId: getMessages
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 10
+          description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - messages
+                  - pagination
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MessageResponse'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenUser'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /mentorings/chats/{chatId}/ws:
+    get:
+      tags:
+        - Mentoring
+      summary: WebSocket Connection
+      description: Establish a WebSocket connection for real-time messaging. Requires authentication via token query parameter.
+      operationId: webSocketConnection
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "01949e48-9f6b-796b-9611-3c9025493233"
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JWT access token for authentication
+      responses:
+        '101':
+          description: Switching Protocols - WebSocket connection established
+        '400':
+          description: Bad Request - Invalid parameters
+        '401':
+          description: Unauthorized - Invalid token
+        '403':
+          description: Forbidden - User does not have access to this chat
+        '404':
+          description: Not Found - Chat not found
