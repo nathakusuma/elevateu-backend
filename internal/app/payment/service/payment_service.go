@@ -16,8 +16,8 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/cache"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
-	"github.com/nathakusuma/elevateu-backend/internal/infra/payment"
 	"github.com/nathakusuma/elevateu-backend/pkg/log"
+	"github.com/nathakusuma/elevateu-backend/pkg/payment"
 	"github.com/nathakusuma/elevateu-backend/pkg/uuidpkg"
 )
 
