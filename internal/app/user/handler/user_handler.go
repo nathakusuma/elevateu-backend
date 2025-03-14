@@ -30,13 +30,14 @@ func InitUserHandler(
 	}
 
 	userGroup := router.Group("/users")
+
+	userGroup.Get("/leaderboards",
+		midw.RequireAuthenticated,
+		handler.getLeaderboard,
+	)
 	userGroup.Get("/me",
 		midw.RequireAuthenticated,
 		handler.getUser("me"),
-	)
-	userGroup.Get("/:id",
-		midw.RequireAuthenticated,
-		handler.getUser("id"),
 	)
 	userGroup.Patch("/me",
 		midw.RequireAuthenticated,
@@ -49,10 +50,13 @@ func InitUserHandler(
 	userGroup.Put("/me/avatar",
 		midw.RequireAuthenticated,
 		handler.updateUserAvatar)
-
 	userGroup.Delete("/me/avatar",
 		midw.RequireAuthenticated,
 		handler.deleteUserAvatar)
+	userGroup.Get("/:id",
+		midw.RequireAuthenticated,
+		handler.getUser("id"),
+	)
 }
 
 func (c *userHandler) getUser(param string) fiber.Handler {
@@ -171,4 +175,15 @@ func (c *userHandler) deleteUserAvatar(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.SendStatus(fiber.StatusNoContent)
+}
+
+func (c *userHandler) getLeaderboard(ctx *fiber.Ctx) error {
+	resp, err := c.svc.GetLeaderboard(ctx.Context())
+	if err != nil {
+		return err
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(map[string]interface{}{
+		"users": resp,
+	})
 }

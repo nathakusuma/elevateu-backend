@@ -415,3 +415,38 @@ func (r *userRepository) AddPoint(ctx context.Context, txWrapper database.ITrans
 
 	return nil
 }
+
+func (r *userRepository) GetTopPoints(ctx context.Context, limit int) ([]*entity.User, error) {
+	query := `
+		SELECT
+			u.id,
+			u.name,
+			u.email,
+			u.role,
+			s.instance AS "student.instance",
+			s.major AS "student.major",
+			s.point AS "student.point"
+		FROM students s
+		JOIN users u ON s.user_id = u.id
+		ORDER BY s.point DESC
+		LIMIT $1
+	`
+
+	rows, err := r.db.QueryxContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query top students: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*entity.User
+	for rows.Next() {
+		var user entity.User
+		if err = rows.StructScan(&user); err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+
+		users = append(users, &user)
+	}
+
+	return users, nil
+}

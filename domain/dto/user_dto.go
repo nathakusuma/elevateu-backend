@@ -117,6 +117,8 @@ func (u *UserResponse) PopulateMinimalFromEntity(user *entity.User,
 		u.Student = &StudentData{
 			Instance: user.Student.Instance,
 			Major:    user.Student.Major,
+			Point:    &user.Student.Point,
+			Badge:    enum.GetBadge(user.Student.Point),
 		}
 	}
 

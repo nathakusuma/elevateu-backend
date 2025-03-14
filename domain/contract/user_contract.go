@@ -18,6 +18,7 @@ type IUserRepository interface {
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 
 	AddPoint(ctx context.Context, txWrapper database.ITransaction, userID uuid.UUID, point int) error
+	GetTopPoints(ctx context.Context, limit int) ([]*entity.User, error)
 }
 
 type IUserService interface {
@@ -29,4 +30,6 @@ type IUserService interface {
 	UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatar *multipart.FileHeader) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	DeleteUserAvatar(ctx context.Context, id uuid.UUID) error
+
+	GetLeaderboard(ctx context.Context) ([]*dto.UserResponse, error)
 }

@@ -349,3 +349,27 @@ func (s *userService) DeleteUserAvatar(ctx context.Context, id uuid.UUID) error 
 
 	return nil
 }
+
+func (s *userService) GetLeaderboard(ctx context.Context) ([]*dto.UserResponse, error) {
+	users, err := s.repo.GetTopPoints(ctx, 10)
+	if err != nil {
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error": err,
+		}, "Failed to get top points")
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
+
+	leaderboard := make([]*dto.UserResponse, len(users))
+	for i, user := range users {
+		leaderboard[i] = &dto.UserResponse{}
+		if err = leaderboard[i].PopulateMinimalFromEntity(user, s.fileUtil.GetSignedURL); err != nil {
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+				"error": err,
+				"user":  user,
+			}, "Failed to populate user response")
+			return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+		}
+	}
+
+	return leaderboard, nil
+}
