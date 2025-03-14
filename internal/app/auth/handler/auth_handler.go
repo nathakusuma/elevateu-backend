@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"net/http"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -12,6 +12,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"github.com/nathakusuma/elevateu-backend/pkg/validator"
 )
 
@@ -22,7 +23,7 @@ type authHandler struct {
 
 func InitAuthHandler(
 	router fiber.Router,
-	middlewareInstance *middleware.Middleware,
+	midw *middleware.Middleware,
 	validator validator.IValidator,
 	authSvc contract.IAuthService,
 ) {
@@ -32,13 +33,52 @@ func InitAuthHandler(
 	}
 
 	authGroup := router.Group("/auth")
-	authGroup.Post("/register/otp", handler.requestOTPRegister)
-	authGroup.Post("/register", handler.register)
-	authGroup.Post("/login", handler.login)
-	authGroup.Post("/refresh", handler.refreshToken)
-	authGroup.Post("/logout", middlewareInstance.RequireAuthenticated, handler.logout)
-	authGroup.Post("/reset-password/otp", handler.requestOTPResetPassword)
-	authGroup.Post("/reset-password", handler.resetPassword)
+
+	otpRateLimiter := midw.RateLimit(middleware.RateLimitConfig{
+		MaxRequests:    5,
+		PerTimeWindow:  15 * time.Minute,
+		ExpirationTime: 30 * time.Minute,
+	})
+
+	loginRateLimiter := midw.RateLimit(middleware.RateLimitConfig{
+		MaxRequests:    5,
+		PerTimeWindow:  5 * time.Minute,
+		ExpirationTime: 10 * time.Minute,
+	})
+
+	registrationRateLimiter := midw.RateLimit(middleware.RateLimitConfig{
+		MaxRequests:    3,
+		PerTimeWindow:  15 * time.Minute,
+		ExpirationTime: 30 * time.Minute,
+	})
+
+	refreshRateLimiter := midw.RateLimit(middleware.RateLimitConfig{
+		MaxRequests:    10,
+		PerTimeWindow:  5 * time.Minute,
+		ExpirationTime: 10 * time.Minute,
+	})
+
+	authGroup.Post("/register/otp",
+		otpRateLimiter,
+		handler.requestOTPRegister)
+	authGroup.Post("/register",
+		registrationRateLimiter,
+		handler.register)
+	authGroup.Post("/login",
+		loginRateLimiter,
+		handler.login)
+	authGroup.Post("/refresh",
+		refreshRateLimiter,
+		handler.refreshToken)
+	authGroup.Post("/logout",
+		midw.RequireAuthenticated,
+		handler.logout)
+	authGroup.Post("/reset-password/otp",
+		otpRateLimiter,
+		handler.requestOTPResetPassword)
+	authGroup.Post("/reset-password",
+		registrationRateLimiter,
+		handler.resetPassword)
 }
 
 func (c *authHandler) requestOTPRegister(ctx *fiber.Ctx) error {

@@ -59,6 +59,12 @@ func ErrValidation() *ResponseError {
 		"There are invalid fields in your request. Please check and try again")
 }
 
+func ErrRateLimitExceeded() *ResponseError {
+	return newError(http.StatusTooManyRequests,
+		"rate-limit-exceeded",
+		"Rate limit exceeded. Please try again later.")
+}
+
 // Auth
 func ErrCredentialsNotMatch() *ResponseError {
 	return newError(http.StatusUnauthorized,
