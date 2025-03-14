@@ -350,56 +350,82 @@ $$
                 '2025-11-15 23:59:59');
 
         -- Mentors specific data
-        INSERT INTO mentors (user_id, specialization, experience, rating, rating_count, rating_total, price, balance)
+        INSERT INTO mentors (user_id, specialization, rating, rating_count, rating_total, price, balance, address,
+                             current_job, company, bio, gender)
         VALUES (mentor1_id, 'Web Development',
-                'Over 8 years of experience in full-stack development with expertise in React, Node.js, and database design. Led development teams for enterprise applications and mentored junior developers.',
-                4.8, 125, 4.8 * 125, 750000, 3500000),
+                4.8, 125, 4.8 * 125, 750000, 3500000,
+                '123 Tech Street, San Francisco, CA', 'Senior Developer', 'TechCorp Inc.',
+                'Passionate full-stack developer with a knack for creating elegant solutions to complex problems. I love mentoring others and helping them grow in their technical journey.',
+                'male'),
 
                (mentor2_id, 'Machine Learning',
-                'Data scientist with 6 years of experience in implementing machine learning models for production. Background in computer vision and natural language processing. Published research in top AI conferences.',
-                4.7, 98, 4.7 * 98, 850000, 2750000);
+                4.7, 98, 4.7 * 98, 850000, 2750000,
+                '456 AI Avenue, Boston, MA', 'Lead Data Scientist', 'AI Innovations',
+                'AI enthusiast dedicated to making machine learning accessible to everyone. My research focuses on practical applications of AI in everyday products.',
+                'female');
 
-        -- Additional Mentors specific data
-        INSERT INTO mentors (user_id, specialization, experience, rating, rating_count, rating_total, price, balance)
+-- Additional Mentors specific data
+        INSERT INTO mentors (user_id, specialization, rating, rating_count, rating_total, price, balance, address,
+                             current_job, company, bio, gender)
         VALUES (mentor3_id, 'Mobile App Development',
-                'iOS and Android developer with 7 years of experience. Created over 20 published apps with millions of downloads. Specialized in React Native and Swift.',
-                4.6, 85, 4.6 * 85, 700000, 2900000),
+                4.6, 85, 4.6 * 85, 700000, 2900000,
+                '789 Mobile Lane, Seattle, WA', 'Mobile App Architect', 'AppWorks',
+                'Mobile development expert who believes in creating intuitive, user-friendly apps that solve real problems. I enjoy the challenge of optimizing for different platforms.',
+                'male'),
 
                (mentor4_id, 'Data Engineering',
-                'Big data specialist with 5 years of experience designing data pipelines and ETL processes. Expert in Hadoop, Spark, and cloud-based data solutions.',
-                4.8, 62, 4.8 * 62, 900000, 3200000),
+                4.8, 62, 4.8 * 62, 900000, 3200000,
+                '101 Data Drive, Austin, TX', 'Data Engineering Manager', 'BigData Solutions',
+                'I help companies harness the power of their data through efficient pipelines and insightful analytics. My expertise lies in building scalable data infrastructure.',
+                'female'),
 
                (mentor5_id, 'Cloud Architecture',
-                'AWS certified solutions architect with 9 years of experience. Helped dozens of companies migrate to cloud infrastructure and optimize costs.',
-                4.9, 120, 4.9 * 120, 950000, 5700000),
+                4.9, 120, 4.9 * 120, 950000, 5700000,
+                '222 Cloud Circle, Portland, OR', 'Cloud Solutions Architect', 'CloudNine Systems',
+                'Cloud evangelist who specializes in helping businesses maximize their cloud investments. I focus on secure, scalable, and cost-effective architectures.',
+                'male'),
 
                (mentor6_id, 'Frontend Development',
-                'UI/UX focused developer with 6 years of experience. Expert in React, Vue, and modern CSS frameworks. Previously worked at top tech companies.',
-                4.7, 95, 4.7 * 95, 650000, 3100000),
+                4.7, 95, 4.7 * 95, 650000, 3100000,
+                '333 Frontend Blvd, Chicago, IL', 'UI/UX Developer', 'VisualTech',
+                'Frontend specialist with an eye for detail and a passion for creating beautiful, intuitive interfaces. I believe good design is as much about function as it is about form.',
+                'female'),
 
                (mentor7_id, 'Backend Development',
-                'Backend engineer with 8 years of experience building scalable APIs and microservices. Proficient in Node.js, Go, and distributed systems.',
-                4.8, 105, 4.8 * 105, 800000, 4200000),
+                4.8, 105, 4.8 * 105, 800000, 4200000,
+                '444 Backend Road, Denver, CO', 'Senior Backend Engineer', 'ServerSide Inc.',
+                'Infrastructure enthusiast focused on building robust, efficient backend systems. I enjoy tackling complex distributed system challenges and performance optimization.',
+                'male'),
 
                (mentor8_id, 'DevOps Engineering',
-                'DevOps specialist with 7 years of experience implementing CI/CD pipelines and infrastructure as code. Expert in Docker, Kubernetes, and GitOps.',
-                4.7, 88, 4.7 * 88, 850000, 3750000),
+                4.7, 88, 4.7 * 88, 850000, 3750000,
+                '555 DevOps Way, Minneapolis, MN', 'DevOps Lead', 'Continuous Delivery Solutions',
+                'DevOps advocate passionate about bridging the gap between development and operations. I help teams implement automated workflows that ensure reliability and speed.',
+                'male'),
 
                (mentor9_id, 'Cybersecurity',
-                'Information security expert with 10 years of experience. Certified ethical hacker with background in penetration testing and security architecture.',
-                4.9, 75, 4.9 * 75, 1000000, 3800000),
+                4.9, 75, 4.9 * 75, 1000000, 3800000,
+                '666 Security Street, Washington, DC', 'Security Architect', 'CyberShield',
+                'Security professional dedicated to protecting digital assets through proactive measures. I believe in a defense-in-depth approach and continuous security education.',
+                'female'),
 
                (mentor10_id, 'Database Design',
-                'Database architect with 8 years of experience. Specializes in SQL and NoSQL database optimization, data modeling, and performance tuning.',
-                4.6, 90, 4.6 * 90, 750000, 3400000),
+                4.6, 90, 4.6 * 90, 750000, 3400000,
+                '777 Database Drive, New York, NY', 'Database Architect', 'DataSystems Corp',
+                'Data modeling expert who loves designing efficient database structures. I enjoy helping teams make the most of their data through optimized schemas and queries.',
+                'male'),
 
                (mentor11_id, 'Blockchain Development',
-                'Blockchain developer with 5 years of experience building dApps and smart contracts. Expert in Ethereum, Solidity, and web3 technologies.',
-                4.7, 60, 4.7 * 60, 950000, 2850000),
+                4.7, 60, 4.7 * 60, 950000, 2850000,
+                '888 Blockchain Boulevard, Miami, FL', 'Blockchain Engineer', 'Distributed Ledger Tech',
+                'Web3 enthusiast focused on building decentralized applications that bring transparency and trust to various industries. I am passionate about the future of blockchain.',
+                'female'),
 
                (mentor12_id, 'Game Development',
-                'Game developer with 9 years of experience. Worked on multiple published titles using Unity and Unreal Engine. Expert in C# and C++ for games.',
-                4.8, 110, 4.8 * 110, 800000, 4400000);
+                4.8, 110, 4.8 * 110, 800000, 4400000,
+                '999 Game Avenue, Los Angeles, CA', 'Senior Game Developer', 'GameCraft Studios',
+                'Creative game developer with a passion for immersive experiences. I specialize in game mechanics and performance optimization for smooth gameplay.',
+                'male');
 
         -- Categories seeder
         INSERT INTO categories (id, name)
