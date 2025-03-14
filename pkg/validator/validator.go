@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strings"
@@ -36,7 +37,7 @@ func NewValidator() IValidator {
 
 		trans, found := translator.GetTranslator("en")
 		if !found {
-			log.Error(nil, nil, "Translator not found")
+			log.Error(context.Background(), nil, "Translator not found")
 		}
 
 		val := validator.New()
@@ -57,7 +58,7 @@ func NewValidator() IValidator {
 
 		err := entranslations.RegisterDefaultTranslations(val, trans)
 		if err != nil {
-			log.Error(nil, map[string]interface{}{
+			log.Error(context.Background(), map[string]interface{}{
 				"error": err,
 			}, "Failed to register default translations")
 		}
@@ -111,7 +112,7 @@ func (v *validatorStruct) handleValidationErrors(err error) error {
 		return resp
 	}
 
-	log.Error(nil, map[string]interface{}{
+	log.Error(context.Background(), map[string]interface{}{
 		"error": err,
 	}, "Unexpected error")
 	return err

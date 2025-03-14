@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jmoiron/sqlx"
@@ -80,7 +82,7 @@ func (s *httpServer) Start(port string) {
 	err := s.app.Listen(port)
 
 	if err != nil {
-		log.Fatal(nil, map[string]interface{}{
+		log.Fatal(context.Background(), map[string]interface{}{
 			"error": err,
 		}, "failed to start server")
 	}

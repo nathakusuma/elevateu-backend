@@ -250,7 +250,7 @@ func (s *mentoringService) RegisterClient(userID uuid.UUID, chatID uuid.UUID, co
 
 	s.clients[chatIDStr][userID] = conn
 
-	log.Info(nil, map[string]interface{}{
+	log.Info(context.Background(), map[string]interface{}{
 		"user.id": userID,
 		"chat.id": chatID,
 	}, "Client registered for chat")
@@ -269,7 +269,7 @@ func (s *mentoringService) UnregisterClient(userID uuid.UUID, chatID uuid.UUID) 
 			delete(s.clients, chatIDStr)
 		}
 
-		log.Info(nil, map[string]interface{}{
+		log.Info(context.Background(), map[string]interface{}{
 			"user.id": userID,
 			"chat.id": chatID,
 		}, "Client unregistered from chat")
@@ -293,7 +293,7 @@ func (s *mentoringService) BroadcastMessage(message *dto.MessageResponse, chatID
 		}
 
 		if err := conn.WriteJSON(message); err != nil {
-			log.Error(nil, map[string]interface{}{
+			log.Error(context.Background(), map[string]interface{}{
 				"error":   err,
 				"user.id": userID,
 				"chat.id": chatID,

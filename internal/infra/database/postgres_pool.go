@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -26,7 +27,7 @@ func NewPostgresPool(host, port, user, pass, dbName, sslMode string) *sqlx.DB {
 
 		pool, err := sqlx.Connect("pgx", dataSourceName)
 		if err != nil {
-			log.Fatal(nil, map[string]interface{}{
+			log.Fatal(context.Background(), map[string]interface{}{
 				"error": err,
 			}, "failed to connect to database")
 		}

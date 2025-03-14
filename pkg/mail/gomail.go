@@ -2,6 +2,7 @@ package mail
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"sync"
@@ -32,7 +33,7 @@ func NewMailDialer() IMailer {
 		// Parse all templates at startup
 		templates, err := template.ParseFS(mailtmpl.Templates, "*.html")
 		if err != nil {
-			log.Fatal(nil, map[string]interface{}{
+			log.Fatal(context.Background(), map[string]interface{}{
 				"error": err,
 			}, "failed to parse templates")
 			return
