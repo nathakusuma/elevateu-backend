@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -96,6 +97,85 @@ func (r *mentoringRepository) GetChatByID(ctx context.Context, chatID uuid.UUID)
 	}
 
 	return &chat, nil
+}
+
+func (r *mentoringRepository) GetChatsByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.MentoringChat, error) {
+	type chatJoin struct {
+		ID        uuid.UUID `db:"id"`
+		StudentID uuid.UUID `db:"student_id"`
+		MentorID  uuid.UUID `db:"mentor_id"`
+		ExpiresAt time.Time `db:"expires_at"`
+		IsTrial   bool      `db:"is_trial"`
+
+		LastMessageID        sql.NullString `db:"last_message.id"`
+		LastMessageChatID    sql.NullString `db:"last_message.chat_id"`
+		LastMessageSenderID  sql.NullString `db:"last_message.sender_id"`
+		LastMessageText      sql.NullString `db:"last_message.message"`
+		LastMessageCreatedAt sql.NullTime   `db:"last_message.created_at"`
+	}
+
+	query := `
+        SELECT mc.id, mc.student_id, mc.mentor_id, mc.expires_at, mc.is_trial,
+               mm.id as "last_message.id",
+               mm.chat_id as "last_message.chat_id",
+               mm.sender_id as "last_message.sender_id",
+               mm.message as "last_message.message",
+               mm.created_at as "last_message.created_at"
+        FROM mentoring_chats mc
+        LEFT JOIN LATERAL (
+            SELECT *
+            FROM mentoring_messages
+            WHERE chat_id = mc.id
+            ORDER BY created_at DESC
+            LIMIT 1
+        ) mm ON true
+        WHERE mc.student_id = $1 OR mc.mentor_id = $1
+        ORDER BY mm.created_at DESC NULLS LAST
+    `
+
+	rows, err := r.db.QueryxContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chats: %w", err)
+	}
+	defer rows.Close()
+
+	var chats []*entity.MentoringChat
+	for rows.Next() {
+		var cj chatJoin
+		if err := rows.StructScan(&cj); err != nil {
+			return nil, fmt.Errorf("failed to scan chat: %w", err)
+		}
+
+		chat := &entity.MentoringChat{
+			ID:        cj.ID,
+			StudentID: cj.StudentID,
+			MentorID:  cj.MentorID,
+			ExpiresAt: cj.ExpiresAt,
+			IsTrial:   cj.IsTrial,
+		}
+
+		if cj.LastMessageID.Valid {
+			messageID, _ := uuid.Parse(cj.LastMessageID.String)
+			chatID, _ := uuid.Parse(cj.LastMessageChatID.String)
+			senderID, _ := uuid.Parse(cj.LastMessageSenderID.String)
+
+			chat.LastMessage = &entity.MentoringMessage{
+				ID:        messageID,
+				ChatID:    chatID,
+				SenderID:  senderID,
+				Message:   cj.LastMessageText.String,
+				CreatedAt: cj.LastMessageCreatedAt.Time,
+			}
+		}
+
+		chats = append(chats, chat)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return chats, nil
 }
 
 func (r *mentoringRepository) GetChatByMentorAndStudent(ctx context.Context, mentorID,

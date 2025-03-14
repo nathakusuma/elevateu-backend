@@ -14,6 +14,7 @@ type IMentoringRepository interface {
 	CreateChat(ctx context.Context, chat *entity.MentoringChat) error
 	CreateTrialChat(ctx context.Context, chat *entity.MentoringChat) error
 	GetChatByID(ctx context.Context, chatID uuid.UUID) (*entity.MentoringChat, error)
+	GetChatsByUserID(ctx context.Context, userID uuid.UUID) ([]*entity.MentoringChat, error)
 	GetChatByMentorAndStudent(ctx context.Context, mentorID,
 		studentID uuid.UUID) (*entity.MentoringChat, error)
 	SendMessage(ctx context.Context, message *entity.MentoringMessage) error
@@ -23,6 +24,7 @@ type IMentoringRepository interface {
 
 type IMentoringService interface {
 	CreateChat(ctx context.Context, mentorID, studentID uuid.UUID, isTrial bool) (*dto.ChatResponse, error)
+	GetChatsByUserID(ctx context.Context, userID uuid.UUID) ([]*dto.ChatResponse, error)
 	SendMessage(ctx context.Context, userID, chatID uuid.UUID,
 		message string) error
 	GetMessages(ctx context.Context, userID uuid.UUID, chatID uuid.UUID,

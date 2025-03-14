@@ -45,6 +45,10 @@ func InitMentoringHandler(
 		midw.RequireOneOfRoles(enum.UserRoleStudent),
 		handler.createTrialChat)
 
+	mentoringsGroup.Get("/chats/my",
+		midw.RequireAuthenticated,
+		handler.getMyChats)
+
 	mentoringsGroup.Post("/chats/:chatId/messages",
 		midw.RequireAuthenticated,
 		handler.sendMessage)
@@ -82,6 +86,23 @@ func (h *mentoringHandler) createTrialChat(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusCreated).JSON(chatResp)
+}
+
+func (h *mentoringHandler) getMyChats(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
+
+	chats, err := h.svc.GetChatsByUserID(ctx.Context(), userID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(map[string]interface{}{
+		"chats": chats,
+	})
 }
 
 func (h *mentoringHandler) sendMessage(ctx *fiber.Ctx) error {

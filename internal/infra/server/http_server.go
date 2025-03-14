@@ -143,7 +143,7 @@ func (s *httpServer) MountRoutes(db *sqlx.DB, cache cache.ICache) {
 	challengeService := challengesvc.NewChallengeService(challengeRepository, fileUtil, uuidInstance)
 	challengeSubmissionService := challengesvc.NewChallengeSubmissionService(challengeSubmissionRepository,
 		challengeRepository, userRepository, txManager, fileUtil, uuidInstance)
-	mentoringService := mentoringsvc.NewMentoringService(mentoringRepository, userRepository, uuidInstance)
+	mentoringService := mentoringsvc.NewMentoringService(mentoringRepository, userRepository, fileUtil, uuidInstance)
 	paymentService := paymentsvc.NewPaymentService(paymentRepository, mentoringService, userService, cache,
 		midtransPayment, txManager, uuidInstance)
 

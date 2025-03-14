@@ -14,6 +14,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
+	"github.com/nathakusuma/elevateu-backend/pkg/fileutil"
 	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"github.com/nathakusuma/elevateu-backend/pkg/uuidpkg"
 )
@@ -21,6 +22,7 @@ import (
 type mentoringService struct {
 	repo         contract.IMentoringRepository
 	userRepo     contract.IUserRepository
+	fileUtil     fileutil.IFileUtil
 	uuid         uuidpkg.IUUID
 	clients      map[string]map[uuid.UUID]*websocket.Conn
 	clientsMutex sync.RWMutex
@@ -29,11 +31,13 @@ type mentoringService struct {
 func NewMentoringService(
 	mentoringRepo contract.IMentoringRepository,
 	userRepo contract.IUserRepository,
+	fileUtil fileutil.IFileUtil,
 	uuidGen uuidpkg.IUUID,
 ) contract.IMentoringService {
 	return &mentoringService{
 		repo:     mentoringRepo,
 		userRepo: userRepo,
+		fileUtil: fileUtil,
 		uuid:     uuidGen,
 		clients:  make(map[string]map[uuid.UUID]*websocket.Conn),
 	}
@@ -134,7 +138,13 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 	}
 
 	response := &dto.ChatResponse{}
-	response.PopulateFromEntity(chat)
+	if err = response.PopulateFromEntity(chat, s.fileUtil.GetSignedURL); err != nil {
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error": err,
+			"chat":  chat,
+		}, "Failed to populate chat response")
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
 
 	log.Info(ctx, map[string]interface{}{
 		"mentor.id": mentorID,
@@ -142,6 +152,34 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 	}, "Chat created")
 
 	return response, nil
+}
+
+func (s *mentoringService) GetChatsByUserID(ctx context.Context, userID uuid.UUID) ([]*dto.ChatResponse, error) {
+	chats, err := s.repo.GetChatsByUserID(ctx, userID)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "chat not found") {
+			return nil, errorpkg.ErrValidation().WithDetail("Chat not found")
+		}
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":   err,
+			"user.id": userID,
+		}, "Failed to get chat")
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
+
+	responses := make([]*dto.ChatResponse, len(chats))
+	for i, chat := range chats {
+		responses[i] = &dto.ChatResponse{}
+		if err = responses[i].PopulateFromEntity(chat, s.fileUtil.GetSignedURL); err != nil {
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+				"error": err,
+				"chat":  chat,
+			}, "Failed to populate chat response")
+			return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+		}
+	}
+
+	return responses, nil
 }
 
 func (s *mentoringService) SendMessage(ctx context.Context, userID, chatID uuid.UUID,
