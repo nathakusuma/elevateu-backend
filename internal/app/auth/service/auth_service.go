@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -68,7 +67,7 @@ func (s *authService) RequestRegisterOTP(ctx context.Context, email string) erro
 		return errorpkg.ErrEmailAlreadyRegistered()
 	}
 
-	if !errors.Is(err, errorpkg.ErrNotFound()) {
+	if !(err.Error() == "Resource not found.") {
 		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"user.email": email,
@@ -201,7 +200,7 @@ func (s *authService) Login(ctx context.Context, req dto.LoginRequest) (dto.Logi
 	// get user by email
 	user, err := s.userSvc.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		if errors.Is(err, errorpkg.ErrNotFound()) {
+		if err.Error() == "Resource not found." {
 			return dto.LoginResponse{}, errorpkg.ErrNotFound().WithDetail("User not found. Please register first.")
 		}
 
@@ -307,7 +306,7 @@ func (s *authService) RequestPasswordResetOTP(ctx context.Context, email string)
 	// check if email is registered
 	_, err := s.userSvc.GetUserByEmail(ctx, email)
 	if err != nil {
-		if errors.Is(err, errorpkg.ErrNotFound()) {
+		if err.Error() == "Resource not found." {
 			return errorpkg.ErrNotFound().WithDetail("User not found. Please register.")
 		}
 
@@ -395,7 +394,7 @@ func (s *authService) ResetPassword(ctx context.Context, req dto.ResetPasswordRe
 
 	// update user password
 	if err = s.userSvc.UpdatePassword(ctx, req.Email, req.NewPassword); err != nil {
-		if errors.Is(err, errorpkg.ErrNotFound()) {
+		if err.Error() == "Resource not found." {
 			// Small chance, since we've already checked it on RequestPasswordResetOTP
 			return dto.LoginResponse{}, err
 		}
