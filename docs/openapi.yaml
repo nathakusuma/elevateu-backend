@@ -21,6 +21,10 @@ components:
       type: string
       enum: [ student, mentor, admin ]
 
+    StudentBadge:
+      type: string
+      enum: [ bronze, silver, gold, nothing ]
+
     StudentData:
       type: object
       properties:
@@ -32,6 +36,22 @@ components:
           type: string
           examples:
             - "Computer Science"
+        point:
+          type: integer
+          examples:
+            - 1000
+        badge:
+          $ref: '#/components/schemas/StudentBadge'
+        subscribed_boost_until:
+          type: string
+          format: date-time
+          examples:
+            - "2022-12-31T23:59:59Z"
+        subscribed_challenge_until:
+          type: string
+          format: date-time
+          examples:
+            - "2022-12-31T23:59:59Z"
 
     MentorData:
       type: object
@@ -60,6 +80,7 @@ components:
           type: string
           examples:
             - "male"
+            - "female"
         rating:
           type: number
           format: float
@@ -105,57 +126,9 @@ components:
           type: [ "string", "null" ]
           format: date-time
         student:
-          type: object
-          properties:
-            instance:
-              type: string
-              examples:
-                - "Universitas Indonesia"
-            major:
-              type: string
-              examples:
-                - "Computer Science"
+          $ref: '#/components/schemas/StudentData'
         mentor:
-          type: object
-          properties:
-            address:
-              type: string
-              examples:
-                - "123 Main Street, Jakarta"
-            specialization:
-              type: string
-              examples:
-                - "Backend Development"
-            current_job:
-              type: string
-              examples:
-                - "Senior Developer"
-            company:
-              type: string
-              examples:
-                - "Gojek"
-            bio:
-              type: [ "string", "null" ]
-              examples:
-                - "Experienced backend developer with 5+ years in the industry"
-            gender:
-              type: string
-              examples:
-                - "male"
-                - "female"
-            rating:
-              type: number
-              format: float
-              examples:
-                - 4.8
-            rating_count:
-              type: integer
-              examples:
-                - 25
-            price:
-              type: integer
-              examples:
-                - 250000
+          $ref: '#/components/schemas/MentorData'
 
     UserMinimal:
       type: object
@@ -175,53 +148,9 @@ components:
           examples:
             - "https://elevateu.nathakusuma.com/assets/avatar.jpg"
         student:
-          type: object
-          properties:
-            instance:
-              type: string
-              examples:
-                - "Universitas Indonesia"
-            major:
-              type: string
-              examples:
-                - "Computer Science"
+          $ref: '#/components/schemas/StudentData'
         mentor:
-          type: object
-          properties:
-            specialization:
-              type: string
-              examples:
-                - "Backend Development"
-            current_job:
-              type: string
-              examples:
-                - "Senior Developer"
-            company:
-              type: string
-              examples:
-                - "Gojek"
-            bio:
-              type: [ "string", "null" ]
-              examples:
-                - "Experienced backend developer with 5+ years in the industry"
-            gender:
-              type: string
-              examples:
-                - "male"
-                - "female"
-            rating:
-              type: number
-              format: float
-              examples:
-                - 4.8
-            rating_count:
-              type: integer
-              examples:
-                - 25
-            price:
-              type: integer
-              examples:
-                - 250000
+          $ref: '#/components/schemas/MentorData'
 
     Category:
       type: object
@@ -1320,6 +1249,78 @@ paths:
       responses:
         '204':
           description: Success - Avatar deleted successfully
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /users/leaderboard:
+    get:
+      tags:
+        - Users
+      summary: Get Leaderboard
+      operationId: getLeaderboard
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - users
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserMinimal'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /users/mentors:
+    get:
+      tags:
+        - Users
+      summary: Get All Mentors
+      operationId: getAllMentors
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - users
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserMinimal'
         '401':
           $ref: '#/components/responses/BearerTokenErrors'
         '500':
