@@ -168,7 +168,7 @@ func (h *mentoringHandler) getMessages(ctx *fiber.Ctx) error {
 }
 
 func (h *mentoringHandler) handleWebSocket(conn *websocket.Conn) {
-	token := conn.Query("token")
+	token := conn.Headers("Authorization")
 	if token == "" {
 		conn.WriteJSON(errorpkg.ErrNoBearerToken)
 		conn.Close()
