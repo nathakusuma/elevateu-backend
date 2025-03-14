@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"strings"
 
 	"github.com/google/uuid"
@@ -24,72 +25,87 @@ func NewCategoryService(repo contract.ICategoryRepository, uuid uuidpkg.IUUID) c
 	}
 }
 
-func (s *categoryService) CreateCategory(name string) (entity.Category, error) {
+func (s *categoryService) CreateCategory(ctx context.Context, name string) (entity.Category, error) {
 	id, err := s.uuid.NewV7()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"name":  name,
-		}, "[CategoryService][CreateCategory] Failed to generate category ID")
+		}, "Failed to generate category ID")
 		return entity.Category{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	if err = s.repo.CreateCategory(id, name); err != nil {
-		if strings.HasPrefix("conflict name", err.Error()) {
+	if err = s.repo.CreateCategory(ctx, id, name); err != nil {
+		if strings.HasPrefix(err.Error(), "conflict name") {
 			return entity.Category{}, errorpkg.ErrCategoryNameExists()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"name":  name,
-		}, "[CategoryService][CreateCategory] Failed to create category")
+		}, "Failed to create category")
 		return entity.Category{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	return entity.Category{ID: id}, nil
+	category := entity.Category{ID: id}
+
+	log.Info(ctx, map[string]interface{}{
+		"category": category,
+	}, "Category created")
+
+	return category, nil
 }
 
-func (s *categoryService) GetAllCategories() ([]entity.Category, error) {
-	categories, err := s.repo.GetAllCategories()
+func (s *categoryService) GetAllCategories(ctx context.Context) ([]entity.Category, error) {
+	categories, err := s.repo.GetAllCategories(ctx)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
-		}, "[CategoryService][GetAllCategories] Failed to get all categories")
+		}, "Failed to get all categories")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return categories, nil
 }
 
-func (s *categoryService) UpdateCategory(id uuid.UUID, name string) error {
-	if err := s.repo.UpdateCategory(id, name); err != nil {
-		if strings.HasPrefix("category not found", err.Error()) {
+func (s *categoryService) UpdateCategory(ctx context.Context, id uuid.UUID, name string) error {
+	if err := s.repo.UpdateCategory(ctx, id, name); err != nil {
+		if strings.HasPrefix(err.Error(), "category not found") {
 			return errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"id":    id,
 			"name":  name,
-		}, "[CategoryService][UpdateCategory] Failed to update category")
+		}, "Failed to update category")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"id":   id,
+		"name": name,
+	}, "Category updated")
 
 	return nil
 }
 
-func (s *categoryService) DeleteCategory(id uuid.UUID) error {
-	if err := s.repo.DeleteCategory(id); err != nil {
-		if strings.HasPrefix("category not found", err.Error()) {
+func (s *categoryService) DeleteCategory(ctx context.Context, id uuid.UUID) error {
+	if err := s.repo.DeleteCategory(ctx, id); err != nil {
+		if strings.HasPrefix(err.Error(), "category not found") {
 			return errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"id":    id,
-		}, "[CategoryService][DeleteCategory] Failed to delete category")
+		}, "Failed to delete category")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"id": id,
+	}, "Category deleted")
 
 	return nil
 }

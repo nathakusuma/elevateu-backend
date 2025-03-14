@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -59,7 +60,8 @@ func InitMentoringHandler(
 func (h *mentoringHandler) createTrialChat(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	var req struct {
@@ -84,7 +86,8 @@ func (h *mentoringHandler) createTrialChat(ctx *fiber.Ctx) error {
 func (h *mentoringHandler) sendMessage(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	chatID, err := uuid.Parse(ctx.Params("chatId"))
@@ -113,7 +116,8 @@ func (h *mentoringHandler) sendMessage(ctx *fiber.Ctx) error {
 func (h *mentoringHandler) getMessages(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	chatID, err := uuid.Parse(ctx.Params("chatId"))

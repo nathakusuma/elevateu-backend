@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
@@ -62,7 +63,8 @@ func (h *paymentHandler) midtransNotification(ctx *fiber.Ctx) error {
 func (h *paymentHandler) paySkillBoost(ctx *fiber.Ctx) error {
 	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	paymentToken, err := h.svc.PaySkillBoost(ctx.Context(), studentID)
@@ -78,7 +80,8 @@ func (h *paymentHandler) paySkillBoost(ctx *fiber.Ctx) error {
 func (h *paymentHandler) paySkillChallenge(ctx *fiber.Ctx) error {
 	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	paymentToken, err := h.svc.PaySkillChallenge(ctx.Context(), studentID)
@@ -94,7 +97,8 @@ func (h *paymentHandler) paySkillChallenge(ctx *fiber.Ctx) error {
 func (h *paymentHandler) paySkillGuidance(ctx *fiber.Ctx) error {
 	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	var req struct {

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -106,7 +107,7 @@ func (h *challengeGroupHandler) updateGroup(ctx *fiber.Ctx) error {
 	}
 
 	var req dto.UpdateChallengeGroupRequest
-	if err := ctx.BodyParser(&req); err != nil {
+	if err = ctx.BodyParser(&req); err != nil {
 		return errorpkg.ErrFailParseRequest()
 	}
 
@@ -115,11 +116,11 @@ func (h *challengeGroupHandler) updateGroup(ctx *fiber.Ctx) error {
 		req.Thumbnail = thumbnail
 	}
 
-	if err := h.val.ValidateStruct(req); err != nil {
+	if err = h.val.ValidateStruct(req); err != nil {
 		return err
 	}
 
-	if err := h.svc.UpdateGroup(ctx.Context(), id, req); err != nil {
+	if err = h.svc.UpdateGroup(ctx.Context(), id, req); err != nil {
 		return err
 	}
 
@@ -132,7 +133,7 @@ func (h *challengeGroupHandler) deleteGroup(ctx *fiber.Ctx) error {
 		return errorpkg.ErrValidation().WithDetail("Invalid challenge group ID")
 	}
 
-	if err := h.svc.DeleteGroup(ctx.Context(), id); err != nil {
+	if err = h.svc.DeleteGroup(ctx.Context(), id); err != nil {
 		return err
 	}
 

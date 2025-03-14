@@ -36,9 +36,7 @@ func NewValidator() IValidator {
 
 		trans, found := translator.GetTranslator("en")
 		if !found {
-			log.Error(map[string]interface{}{
-				"error": "translator not found",
-			}, "[VALIDATOR][NewValidator] Translator not found")
+			log.Error(nil, nil, "Translator not found")
 		}
 
 		val := validator.New()
@@ -59,9 +57,9 @@ func NewValidator() IValidator {
 
 		err := entranslations.RegisterDefaultTranslations(val, trans)
 		if err != nil {
-			log.Error(map[string]interface{}{
-				"error": err.Error(),
-			}, "[VALIDATOR][NewValidator] Failed to register default translations")
+			log.Error(nil, map[string]interface{}{
+				"error": err,
+			}, "Failed to register default translations")
 		}
 
 		validatorInstance = &validatorStruct{
@@ -75,19 +73,19 @@ func NewValidator() IValidator {
 
 func (v *validatorStruct) ValidateStruct(data interface{}) error {
 	if err := v.validator.Struct(data); err != nil {
-		return v.handleValidationErrors(err, data)
+		return v.handleValidationErrors(err)
 	}
 	return nil
 }
 
 func (v *validatorStruct) ValidateVariable(data interface{}, tag string) error {
 	if err := v.validator.Var(data, tag); err != nil {
-		return v.handleValidationErrors(err, nil)
+		return v.handleValidationErrors(err)
 	}
 	return nil
 }
 
-func (v *validatorStruct) handleValidationErrors(err error, data interface{}) error {
+func (v *validatorStruct) handleValidationErrors(err error) error {
 	var valErrs validator.ValidationErrors
 	if errors.As(err, &valErrs) {
 		length := len(valErrs)
@@ -113,8 +111,8 @@ func (v *validatorStruct) handleValidationErrors(err error, data interface{}) er
 		return resp
 	}
 
-	log.Error(map[string]interface{}{
-		"error": err.Error(),
-	}, "[VALIDATOR][handleValidationErrors] Unexpected error")
+	log.Error(nil, map[string]interface{}{
+		"error": err,
+	}, "Unexpected error")
 	return err
 }

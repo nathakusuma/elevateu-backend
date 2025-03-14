@@ -22,9 +22,9 @@ func LoggerConfig() fiber.Handler {
 			"method",
 		},
 		Messages: []string{
-			"[] Server error",
-			"[] Client error",
-			"[] Success",
+			"Server error",
+			"Client error",
+			"Success",
 		},
 	}
 

@@ -52,20 +52,20 @@ func (u *fileUtil) ValidateAndUploadFile(ctx context.Context, header *multipart.
 
 	file, err := header.Open()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"path":  path,
-		}, "[FileUtil][ValidateAndUploadFile] Failed to open file")
+		}, "Failed to open file")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer file.Close()
 
 	ok, fileType, err := u.CheckMIMEFileType(file, allowedTypes)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"path":  path,
-		}, "[FileUtil][ValidateAndUploadFile] Failed to check MIME file type")
+		}, "Failed to check MIME file type")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -76,10 +76,10 @@ func (u *fileUtil) ValidateAndUploadFile(ctx context.Context, header *multipart.
 
 	url, err := u.Upload(ctx, file, path)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"path":  path,
-		}, "[FileUtil][ValidateAndUploadFile] Failed to upload file")
+		}, "Failed to upload file")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 

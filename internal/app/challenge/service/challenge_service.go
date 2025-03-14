@@ -38,10 +38,10 @@ func (s *challengeService) CreateChallenge(ctx context.Context,
 	req *dto.CreateChallengeRequest) (*dto.ChallengeResponse, error) {
 	challengeID, err := s.uuid.NewV7()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[ChallengeService][CreateChallenge] Failed to generate challenge ID")
+		}, "Failed to generate challenge ID")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -61,12 +61,16 @@ func (s *challengeService) CreateChallenge(ctx context.Context,
 			return nil, errorpkg.ErrValidation().WithDetail("Challenge group not found")
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[ChallengeService][CreateChallenge] Failed to create challenge")
+		}, "Failed to create challenge")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"challenge": challenge,
+	}, "Challenge created")
 
 	return &dto.ChallengeResponse{ID: challengeID}, nil
 }
@@ -75,12 +79,12 @@ func (s *challengeService) GetChallenges(ctx context.Context, groupID uuid.UUID,
 	paginationReq dto.PaginationRequest) ([]*dto.ChallengeResponse, dto.PaginationResponse, error) {
 	challenges, pageResp, err := s.repo.GetChallenges(ctx, groupID, difficulty, paginationReq)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"groupID":    groupID,
 			"difficulty": difficulty,
 			"pagination": paginationReq,
-		}, "[ChallengeService][GetChallenges] Failed to get challenges")
+		}, "Failed to get challenges")
 		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -96,14 +100,14 @@ func (s *challengeService) GetChallenges(ctx context.Context, groupID uuid.UUID,
 func (s *challengeService) GetChallengeDetail(ctx context.Context, id uuid.UUID) (*dto.ChallengeResponse, error) {
 	challenge, err := s.repo.GetChallengeByID(ctx, id)
 	if err != nil {
-		if err.Error() == "challenge not found" {
+		if strings.HasPrefix(err.Error(), "challenge not found") {
 			return nil, errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"id":    id,
-		}, "[ChallengeService][GetChallengeDetail] Failed to get challenge detail")
+		}, "Failed to get challenge detail")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -125,19 +129,24 @@ func (s *challengeService) UpdateChallenge(ctx context.Context, id uuid.UUID, re
 
 	err := s.repo.UpdateChallenge(ctx, id, updates)
 	if err != nil {
-		if err.Error() == "challenge not found" {
+		if strings.HasPrefix(err.Error(), "challenge not found") {
 			return errorpkg.ErrNotFound()
 		} else if strings.HasPrefix(err.Error(), "challenge group not found") {
 			return errorpkg.ErrValidation().WithDetail("Challenge group not found")
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"id":      id,
 			"request": req,
-		}, "[ChallengeService][UpdateChallenge] Failed to update challenge")
+		}, "Failed to update challenge")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"id":      id,
+		"request": req,
+	}, "Challenge updated")
 
 	return nil
 }
@@ -145,16 +154,20 @@ func (s *challengeService) UpdateChallenge(ctx context.Context, id uuid.UUID, re
 func (s *challengeService) DeleteChallenge(ctx context.Context, id uuid.UUID) error {
 	err := s.repo.DeleteChallenge(ctx, id)
 	if err != nil {
-		if err.Error() == "challenge not found" {
+		if strings.HasPrefix(err.Error(), "challenge not found") {
 			return errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"id":    id,
-		}, "[ChallengeService][DeleteChallenge] Failed to delete challenge")
+		}, "Failed to delete challenge")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"id": id,
+	}, "Challenge deleted")
 
 	return nil
 }

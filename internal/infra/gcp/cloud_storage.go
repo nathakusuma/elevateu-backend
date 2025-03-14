@@ -19,9 +19,9 @@ func NewStorageClient() *storage.Client {
 		ctx := context.Background()
 		cl, err := storage.NewClient(ctx)
 		if err != nil {
-			log.Fatal(map[string]interface{}{
+			log.Fatal(ctx, map[string]interface{}{
 				"error": err,
-			}, "[GCP][NewStorageClient] Failed to create new cloud storage client")
+			}, "Failed to create new cloud storage client")
 			return
 		}
 

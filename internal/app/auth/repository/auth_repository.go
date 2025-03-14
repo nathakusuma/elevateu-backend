@@ -128,7 +128,7 @@ func (r *authRepository) GetAuthSessionByToken(ctx context.Context, token string
 	}
 
 	var join SessionJoin
-	if err := rows.StructScan(&join); err != nil {
+	if err = rows.StructScan(&join); err != nil {
 		return nil, fmt.Errorf("error scanning auth session: %w", err)
 	}
 

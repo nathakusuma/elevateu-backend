@@ -26,9 +26,9 @@ func NewPostgresPool(host, port, user, pass, dbName, sslMode string) *sqlx.DB {
 
 		pool, err := sqlx.Connect("pgx", dataSourceName)
 		if err != nil {
-			log.Fatal(map[string]interface{}{
+			log.Fatal(nil, map[string]interface{}{
 				"error": err,
-			}, "[DB][NewPostgresPool] failed to connect to database")
+			}, "failed to connect to database")
 		}
 
 		pool.SetMaxOpenConns(100)

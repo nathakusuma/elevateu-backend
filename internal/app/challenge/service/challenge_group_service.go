@@ -36,12 +36,13 @@ func NewChallengeGroupService(
 
 func (s *challengeGroupService) CreateGroup(ctx context.Context,
 	req dto.CreateChallengeGroupRequest) (*dto.ChallengeGroupResponse, error) {
+
 	groupID, err := s.uuid.NewV7()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[ChallengeGroupService][CreateGroup] Failed to generate group ID")
+		}, "Failed to generate group ID")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -66,12 +67,16 @@ func (s *challengeGroupService) CreateGroup(ctx context.Context,
 			return nil, errorpkg.ErrValidation().WithDetail("Category not found")
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[ChallengeGroupService][CreateGroup] Failed to create challenge group")
+		}, "Failed to create challenge group")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"challenge_group": group,
+	}, "Challenge group created")
 
 	return &dto.ChallengeGroupResponse{
 		ID: groupID,
@@ -82,11 +87,11 @@ func (s *challengeGroupService) GetGroups(ctx context.Context, query dto.GetChal
 	pageReq dto.PaginationRequest) ([]*dto.ChallengeGroupResponse, dto.PaginationResponse, error) {
 	groups, pageResp, err := s.repo.GetGroups(ctx, query, pageReq)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"query": query,
 			"page":  pageReq,
-		}, "[ChallengeGroupService][GetGroups] Failed to get challenge groups")
+		}, "Failed to get challenge groups")
 		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -95,10 +100,10 @@ func (s *challengeGroupService) GetGroups(ctx context.Context, query dto.GetChal
 		resp[i] = &dto.ChallengeGroupResponse{}
 		err = resp[i].PopulateFromEntity(group, s.fileUtil.GetSignedURL)
 		if err != nil {
-			traceID := log.ErrorWithTraceID(map[string]interface{}{
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 				"error": err,
 				"group": group,
-			}, "[ChallengeGroupService][GetGroups] Failed to populate response")
+			}, "Failed to populate response")
 			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 	}
@@ -116,27 +121,32 @@ func (s *challengeGroupService) UpdateGroup(ctx context.Context, groupID uuid.UU
 
 	err := s.repo.UpdateGroup(ctx, groupID, updates)
 	if err != nil {
-		if err.Error() == "challenge group not found" {
+		if strings.HasPrefix(err.Error(), "challenge group not found") {
 			return errorpkg.ErrNotFound()
 		} else if strings.HasPrefix(err.Error(), "category not found") {
 			return errorpkg.ErrValidation().WithDetail("Category not found")
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"groupID": groupID,
-			"request": req,
-		}, "[ChallengeGroupService][UpdateGroup] Failed to update challenge group")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":    err,
+			"group.id": groupID,
+			"request":  req,
+		}, "Failed to update challenge group")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if req.Thumbnail != nil {
-		_, err := s.fileUtil.ValidateAndUploadFile(ctx, req.Thumbnail, fileutil.ImageContentTypes,
+		_, err = s.fileUtil.ValidateAndUploadFile(ctx, req.Thumbnail, fileutil.ImageContentTypes,
 			fmt.Sprintf("challenge_groups/thumbnail/%s", groupID))
 		if err != nil {
 			return err
 		}
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"group.id": groupID,
+		"request":  req,
+	}, "Challenge group updated")
 
 	return nil
 }
@@ -148,21 +158,25 @@ func (s *challengeGroupService) DeleteGroup(ctx context.Context, groupID uuid.UU
 			return errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"groupID": groupID,
-		}, "[ChallengeGroupService][DeleteGroup] Failed to delete challenge group")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":    err,
+			"group.id": groupID,
+		}, "Failed to delete challenge group")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	// Delete thumbnail file
 	err = s.fileUtil.Delete(ctx, fmt.Sprintf("challenge_groups/thumbnail/%s", groupID))
 	if err != nil {
-		log.Error(map[string]interface{}{
-			"error":   err,
-			"groupID": groupID,
-		}, "[ChallengeGroupService][DeleteGroup] Failed to delete thumbnail")
+		log.Error(ctx, map[string]interface{}{
+			"error":    err,
+			"group.id": groupID,
+		}, "Failed to delete thumbnail")
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"group.id": groupID,
+	}, "Challenge group deleted")
 
 	return nil
 }

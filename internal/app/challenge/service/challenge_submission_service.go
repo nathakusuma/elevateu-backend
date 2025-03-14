@@ -49,23 +49,23 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 	req dto.CreateChallengeSubmissionRequest) error {
 	userID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx, nil, "Failed to get user ID from context")
+		return errorpkg.ErrInvalidBearerToken().WithTraceID(traceID)
 	}
 
 	challenge, err := s.challengeRepo.GetChallengeByID(ctx, req.ChallengeID)
 	if err != nil {
-		if err.Error() == "challenge not found" {
+		if strings.HasPrefix(err.Error(), "challenge not found") {
 			return errorpkg.ErrValidation().WithDetail("Challenge not found")
 		}
 	}
 
 	submissionID, err := s.uuid.NewV7()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-			"user.id": userID,
-		}, "[ChallengeSubmissionService][CreateSubmission] Failed to generate submission ID")
+		}, "Failed to generate submission ID")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -78,11 +78,10 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 
 	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"submission": submission,
-			"user.id":    userID,
-		}, "[ChallengeSubmissionService][CreateSubmission] Failed to begin transaction for adding points")
+		}, "Failed to begin transaction for adding points")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
@@ -93,10 +92,10 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 			return errorpkg.ErrStudentAlreadySubmittedChallenge()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"submission": submission,
-		}, "[ChallengeSubmissionService][CreateSubmission] Failed to create submission")
+		}, "Failed to create submission")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -112,21 +111,25 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 
 	err = s.userRepo.AddPoint(ctx, tx, submission.StudentID, points)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"submission": submission,
 			"points":     points,
-		}, "[ChallengeSubmissionService][CreateSubmission] Failed to add points to student")
+		}, "Failed to add points to student")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err = tx.Commit(); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"submission": submission,
-		}, "[ChallengeSubmissionService][CreateSubmission] Failed to commit transaction for adding points")
+		}, "Failed to commit transaction for adding points")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"submission": submission,
+	}, "Submission created")
 
 	return nil
 }
@@ -140,24 +143,24 @@ func (s *challengeSubmissionService) GetSubmissionAsStudent(ctx context.Context,
 
 	submission, err := s.repo.GetSubmissionByStudent(ctx, challengeID, studentID)
 	if err != nil {
-		if err.Error() == "submission not found" {
+		if strings.HasPrefix(err.Error(), "submission not found") {
 			return nil, errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":       err,
-			"challengeID": challengeID,
-			"studentID":   studentID,
-		}, "[ChallengeSubmissionService][GetSubmissionAsStudent] Failed to get submission")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":        err,
+			"challenge.id": challengeID,
+			"student.id":   studentID,
+		}, "Failed to get submission")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	resp := &dto.ChallengeSubmissionResponse{}
 	if err = resp.PopulateFromEntity(submission, s.fileUtil.GetSignedURL); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"submission": submission,
-		}, "[ChallengeSubmissionService][GetSubmissionAsStudent] Failed to populate response")
+		}, "Failed to populate response")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -168,11 +171,11 @@ func (s *challengeSubmissionService) GetSubmissionsAsMentor(ctx context.Context,
 	pageReq dto.PaginationRequest) ([]*dto.ChallengeSubmissionResponse, dto.PaginationResponse, error) {
 	submissions, pageResp, err := s.repo.GetSubmissionsByChallenge(ctx, challengeID, pageReq)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":       err,
-			"challengeID": challengeID,
-			"pagination":  pageReq,
-		}, "[ChallengeSubmissionService][GetSubmissionsAsMentor] Failed to get submissions")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":        err,
+			"challenge.id": challengeID,
+			"pagination":   pageReq,
+		}, "Failed to get submissions")
 		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -180,10 +183,10 @@ func (s *challengeSubmissionService) GetSubmissionsAsMentor(ctx context.Context,
 	for i, submission := range submissions {
 		resp[i] = &dto.ChallengeSubmissionResponse{}
 		if err = resp[i].PopulateFromEntity(submission, s.fileUtil.GetSignedURL); err != nil {
-			traceID := log.ErrorWithTraceID(map[string]interface{}{
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 				"error":      err,
 				"submission": submission,
-			}, "[ChallengeSubmissionService][GetSubmissionsAsMentor] Failed to populate response")
+			}, "Failed to populate response")
 			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 	}
@@ -200,15 +203,14 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 
 	submission, err := s.repo.GetSubmissionByID(ctx, submissionID)
 	if err != nil {
-		if err.Error() == "submission not found" {
+		if strings.HasPrefix(err.Error(), "submission not found") {
 			return errorpkg.ErrValidation().WithDetail("Submission not found")
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":         err,
 			"submission.id": submissionID,
-			"mentor.id":     mentorID,
-		}, "[ChallengeSubmissionService][CreateFeedback] Failed to get submission")
+		}, "Failed to get submission")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -221,11 +223,10 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 
 	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":     err,
-			"feedback":  feedback,
-			"mentor.id": mentorID,
-		}, "[ChallengeSubmissionService][CreateFeedback] Failed to begin transaction for adding points")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":    err,
+			"feedback": feedback,
+		}, "Failed to begin transaction for adding points")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
@@ -236,11 +237,10 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 			return errorpkg.ErrMentorAlreadySubmittedFeedback()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":     err,
-			"feedback":  feedback,
-			"mentor.id": mentorID,
-		}, "[ChallengeSubmissionService][CreateFeedback] Failed to create feedback")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":    err,
+			"feedback": feedback,
+		}, "Failed to create feedback")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -257,21 +257,25 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 
 	err = s.userRepo.AddPoint(ctx, tx, submission.StudentID, points)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":    err,
 			"feedback": feedback,
 			"points":   points,
-		}, "[ChallengeSubmissionService][CreateFeedback] Failed to add points to student")
+		}, "Failed to add points to student")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err = tx.Commit(); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":    err,
 			"feedback": feedback,
-		}, "[ChallengeSubmissionService][CreateFeedback] Failed to commit transaction for adding points")
+		}, "Failed to commit transaction for adding points")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"feedback": feedback,
+	}, "Feedback created")
 
 	return nil
 }

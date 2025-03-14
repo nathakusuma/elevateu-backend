@@ -80,9 +80,9 @@ func (s *httpServer) Start(port string) {
 	err := s.app.Listen(port)
 
 	if err != nil {
-		log.Fatal(map[string]interface{}{
-			"error": err.Error(),
-		}, "[SERVER][Start] failed to start server")
+		log.Fatal(nil, map[string]interface{}{
+			"error": err,
+		}, "failed to start server")
 	}
 }
 

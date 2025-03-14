@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
@@ -45,7 +46,8 @@ func (h *courseProgressHandler) updateVideoProgress(ctx *fiber.Ctx) error {
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	var req dto.UpdateCourseVideoProgressRequest
@@ -72,7 +74,8 @@ func (h *courseProgressHandler) completeMaterial(ctx *fiber.Ctx) error {
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err = h.svc.UpdateMaterialProgress(ctx.Context(), userID, materialID); err != nil {

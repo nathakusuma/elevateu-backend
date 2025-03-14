@@ -55,15 +55,15 @@ func (h *challengeSubmissionHandler) createSubmission(ctx *fiber.Ctx) error {
 	}
 	req.ChallengeID = challengeID
 
-	if err := ctx.BodyParser(&req); err != nil {
+	if err = ctx.BodyParser(&req); err != nil {
 		return errorpkg.ErrFailParseRequest()
 	}
 
-	if err := h.val.ValidateStruct(req); err != nil {
+	if err = h.val.ValidateStruct(req); err != nil {
 		return err
 	}
 
-	if err := h.svc.CreateSubmission(ctx.Context(), req); err != nil {
+	if err = h.svc.CreateSubmission(ctx.Context(), req); err != nil {
 		return err
 	}
 
@@ -93,11 +93,11 @@ func (h *challengeSubmissionHandler) getSubmissionsAsMentor(ctx *fiber.Ctx) erro
 	}
 
 	var pageReq dto.PaginationRequest
-	if err := ctx.QueryParser(&pageReq); err != nil {
+	if err = ctx.QueryParser(&pageReq); err != nil {
 		return errorpkg.ErrFailParseRequest()
 	}
 
-	if err := h.val.ValidateStruct(pageReq); err != nil {
+	if err = h.val.ValidateStruct(pageReq); err != nil {
 		return err
 	}
 
@@ -119,15 +119,15 @@ func (h *challengeSubmissionHandler) createFeedback(ctx *fiber.Ctx) error {
 	}
 
 	var req dto.CreateChallengeSubmissionFeedbackRequest
-	if err := ctx.BodyParser(&req); err != nil {
+	if err = ctx.BodyParser(&req); err != nil {
 		return errorpkg.ErrFailParseRequest()
 	}
 
-	if err := h.val.ValidateStruct(req); err != nil {
+	if err = h.val.ValidateStruct(req); err != nil {
 		return err
 	}
 
-	if err := h.svc.CreateFeedback(ctx.Context(), submissionID, req); err != nil {
+	if err = h.svc.CreateFeedback(ctx.Context(), submissionID, req); err != nil {
 		return err
 	}
 

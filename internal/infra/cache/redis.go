@@ -34,9 +34,9 @@ func NewRedis(host, port, pass string, db int) ICache {
 
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
-		log.Fatal(map[string]interface{}{
-			"error": err.Error(),
-		}, "[REDIS][NewRedis] failed to connect to redis")
+		log.Fatal(ctx, map[string]interface{}{
+			"error": err,
+		}, "failed to connect to redis")
 	}
 
 	return &redisImpl{

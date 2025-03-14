@@ -69,7 +69,7 @@ func (r *courseRepository) GetCourseByID(ctx context.Context, id uuid.UUID) (*en
 	err := r.db.QueryRowxContext(ctx, query, id).StructScan(&course)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("course not found")
+			return nil, fmt.Errorf("course not found: %w", err)
 		}
 
 		return nil, err
@@ -289,9 +289,9 @@ func (r *courseRepository) CreateEnrollment(ctx context.Context, courseID, stude
 		if errors.As(err, &pgErr) {
 			switch pgErr.ConstraintName {
 			case "course_enrollments_course_id_fkey":
-				return errors.New("course not found")
+				return fmt.Errorf("course not found: %w", err)
 			case "course_enrollments_pkey":
-				return errors.New("student already enrolled in course")
+				return fmt.Errorf("student already enrolled in course: %w", err)
 			}
 		}
 
@@ -426,7 +426,7 @@ func (r *courseRepository) GetEnrollment(ctx context.Context, courseID,
 	err := r.db.GetContext(ctx, &enrollment, query, courseID, studentID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("enrollment not found")
+			return nil, fmt.Errorf("enrollment not found: %w", err)
 		}
 
 		return nil, err

@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
@@ -61,7 +62,8 @@ func (c *userHandler) getUser(param string) fiber.Handler {
 			var ok bool
 			userID, ok = ctx.Locals(ctxkey.UserID).(uuid.UUID)
 			if !ok {
-				return errorpkg.ErrInvalidBearerToken()
+				traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+				return errorpkg.ErrInternalServer().WithTraceID(traceID)
 			}
 		} else {
 			var err error
@@ -96,7 +98,8 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	// Validate role-specific data
@@ -125,7 +128,8 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 func (c *userHandler) deleteUser(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err := c.svc.DeleteUser(ctx.Context(), userID); err != nil {
@@ -144,7 +148,8 @@ func (c *userHandler) updateUserAvatar(ctx *fiber.Ctx) error {
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err2 := c.svc.UpdateUserAvatar(ctx.Context(), userID, file); err2 != nil {
@@ -157,7 +162,8 @@ func (c *userHandler) updateUserAvatar(ctx *fiber.Ctx) error {
 func (c *userHandler) deleteUserAvatar(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err := c.svc.DeleteUserAvatar(ctx.Context(), userID); err != nil {

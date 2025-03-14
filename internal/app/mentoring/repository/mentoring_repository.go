@@ -90,7 +90,7 @@ func (r *mentoringRepository) GetChatByID(ctx context.Context, chatID uuid.UUID)
 	err := r.db.GetContext(ctx, &chat, query, chatID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("chat not found")
+			return nil, fmt.Errorf("chat not found: %w", err)
 		}
 		return nil, fmt.Errorf("failed to get chat: %w", err)
 	}

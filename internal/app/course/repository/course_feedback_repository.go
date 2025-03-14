@@ -150,7 +150,7 @@ func (r *courseFeedbackRepository) GetFeedbackByID(ctx context.Context,
 	err := r.db.QueryRowxContext(ctx, query, feedbackID).StructScan(&feedback)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("feedback not found")
+			return nil, fmt.Errorf("feedback not found: %w", err)
 		}
 		return nil, fmt.Errorf("failed to get feedback: %w", err)
 	}

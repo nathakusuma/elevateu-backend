@@ -36,9 +36,9 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 	req dto.UpdateCourseVideoProgressRequest) error {
 	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
-		}, "[CourseProgressService][UpdateVideoProgress] Failed to begin transaction")
+		}, "Failed to begin transaction")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
@@ -49,10 +49,10 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 			return errorpkg.ErrValidation().WithDetail("Video not found")
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":    err,
 			"video.id": videoID,
-		}, "[CourseProgressService][UpdateVideoProgress] Failed to get course ID for video")
+		}, "Failed to get course ID for video")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -65,11 +65,10 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 
 	newlyCompleted, err := s.repo.UpdateVideoProgress(ctx, tx, progress)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":      err,
-			"student.id": studentID,
-			"video.id":   videoID,
-		}, "[CourseProgressService][UpdateVideoProgress] Failed to update video progress")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":    err,
+			"video.id": videoID,
+		}, "Failed to update video progress")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -77,20 +76,19 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 	if newlyCompleted {
 		courseCompleted, err := s.repo.IncrementCourseProgress(ctx, tx, courseID, studentID)
 		if err != nil {
-			traceID := log.ErrorWithTraceID(map[string]interface{}{
-				"error":      err,
-				"course.id":  courseID,
-				"student.id": studentID,
-			}, "[CourseProgressService][UpdateVideoProgress] Failed to update course progress")
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+				"error":     err,
+				"course.id": courseID,
+			}, "Failed to update course progress")
 			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 
 		if courseCompleted {
 			if err = s.userRepo.AddPoint(ctx, tx, studentID, 50); err != nil {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
+				traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 					"error":      err,
 					"student.id": studentID,
-				}, "[CourseProgressService][UpdateVideoProgress] Failed to add points to student")
+				}, "Failed to add points to student")
 				return errorpkg.ErrInternalServer().WithTraceID(traceID)
 			}
 		}
@@ -98,11 +96,15 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 
 	err = tx.Commit()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
-		}, "[CourseProgressService][UpdateVideoProgress] Failed to commit transaction")
+		}, "Failed to commit transaction")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"video.id": videoID,
+	}, "Video progress updated")
 
 	return nil
 }
@@ -111,9 +113,9 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 	materialID uuid.UUID) error {
 	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
-		}, "[CourseProgressService][UpdateMaterialProgress] Failed to begin transaction")
+		}, "Failed to begin transaction")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
@@ -124,10 +126,10 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 			return errorpkg.ErrValidation().WithDetail("Material not found")
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":       err,
 			"material.id": materialID,
-		}, "[CourseProgressService][UpdateMaterialProgress] Failed to get course ID for material")
+		}, "Failed to get course ID for material")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -138,11 +140,10 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 
 	newlyCompleted, err := s.repo.UpdateMaterialProgress(ctx, tx, progress)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":       err,
-			"student.id":  studentID,
 			"material.id": materialID,
-		}, "[CourseProgressService][UpdateMaterialProgress] Failed to update material progress")
+		}, "Failed to update material progress")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -150,21 +151,20 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 	if newlyCompleted {
 		courseCompleted, err := s.repo.IncrementCourseProgress(ctx, tx, courseID, studentID)
 		if err != nil {
-			traceID := log.ErrorWithTraceID(map[string]interface{}{
-				"error":      err,
-				"course.id":  courseID,
-				"student.id": studentID,
-			}, "[CourseProgressService][UpdateMaterialProgress] Failed to update course progress")
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+				"error":     err,
+				"course.id": courseID,
+			}, "Failed to update course progress")
 			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 
 		// If the course was just completed, add points to the student
 		if courseCompleted {
 			if err = s.userRepo.AddPoint(ctx, tx, studentID, 50); err != nil {
-				traceID := log.ErrorWithTraceID(map[string]interface{}{
+				traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 					"error":      err,
 					"student.id": studentID,
-				}, "[CourseProgressService][UpdateMaterialProgress] Failed to add points to student")
+				}, "Failed to add points to student")
 				return errorpkg.ErrInternalServer().WithTraceID(traceID)
 			}
 		}
@@ -172,11 +172,15 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 
 	err = tx.Commit()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
-		}, "[CourseProgressService][UpdateMaterialProgress] Failed to commit transaction")
+		}, "Failed to commit transaction")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"material.id": materialID,
+	}, "Material progress updated")
 
 	return nil
 }

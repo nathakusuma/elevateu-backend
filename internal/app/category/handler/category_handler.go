@@ -56,7 +56,7 @@ func (c *categoryHandler) createCategory(ctx *fiber.Ctx) error {
 		return err
 	}
 
-	category, err := c.svc.CreateCategory(req.Name)
+	category, err := c.svc.CreateCategory(ctx.Context(), req.Name)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (c *categoryHandler) createCategory(ctx *fiber.Ctx) error {
 }
 
 func (c *categoryHandler) getAllCategories(ctx *fiber.Ctx) error {
-	categories, err := c.svc.GetAllCategories()
+	categories, err := c.svc.GetAllCategories(ctx.Context())
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (c *categoryHandler) updateCategory(ctx *fiber.Ctx) error {
 		return errorpkg.ErrValidation().WithDetail("Invalid category ID")
 	}
 
-	if err2 := c.svc.UpdateCategory(id, req.Name); err2 != nil {
+	if err2 := c.svc.UpdateCategory(ctx.Context(), id, req.Name); err2 != nil {
 		return err2
 	}
 
@@ -113,7 +113,7 @@ func (c *categoryHandler) deleteCategory(ctx *fiber.Ctx) error {
 		return errorpkg.ErrValidation().WithDetail("Invalid category ID")
 	}
 
-	if err2 := c.svc.DeleteCategory(id); err2 != nil {
+	if err2 := c.svc.DeleteCategory(ctx.Context(), id); err2 != nil {
 		return err2
 	}
 

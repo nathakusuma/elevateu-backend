@@ -43,14 +43,14 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 	studentID uuid.UUID, isTrial bool) (*dto.ChatResponse, error) {
 	mentor, err := s.userRepo.GetUserByField(ctx, "id", mentorID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if strings.HasPrefix(err.Error(), "user not found") {
 			return nil, errorpkg.ErrValidation().WithDetail("Mentor not found")
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":     err,
 			"mentor.id": mentorID,
-		}, "[MentoringService][CreateChat] Failed to get mentor")
+		}, "Failed to get mentor")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -60,10 +60,10 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 
 	student, err := s.userRepo.GetUserByField(ctx, "id", studentID)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":      err,
-			"student.id": studentID,
-		}, "[MentoringService][CreateChat] Failed to get student")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":     err,
+			"mentor.id": mentorID,
+		}, "Failed to get student")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -74,11 +74,10 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 	currentChat, err := s.repo.GetChatByMentorAndStudent(ctx, mentorID, studentID)
 	if err != nil {
 		if !strings.HasPrefix(err.Error(), "chat not found") {
-			traceID := log.ErrorWithTraceID(map[string]interface{}{
-				"error":      err,
-				"mentor.id":  mentorID,
-				"student.id": studentID,
-			}, "[MentoringService][CreateChat] Failed to get chat")
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+				"error":     err,
+				"mentor.id": mentorID,
+			}, "Failed to get chat")
 			return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 	}
@@ -89,11 +88,10 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 
 	chatID, err := s.uuid.NewV7()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":      err,
-			"mentor.id":  mentorID,
-			"student.id": studentID,
-		}, "[MentoringService][CreateChat] Failed to generate chat ID")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":     err,
+			"mentor.id": mentorID,
+		}, "Failed to generate chat ID")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -128,21 +126,20 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 		if strings.HasPrefix(repoErr.Error(), "trial chat already exists") {
 			return nil, errorpkg.ErrTrialUsed()
 		}
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": repoErr,
 			"chat":  chat,
-		}, "[MentoringService][CreateChat] Failed to create chat")
+		}, "Failed to create chat")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	response := &dto.ChatResponse{}
 	response.PopulateFromEntity(chat)
 
-	log.Info(map[string]interface{}{
-		"mentor.id":  mentorID,
-		"student.id": studentID,
-		"chat.id":    chatID,
-	}, "[MentoringService][CreateChat] Chat created")
+	log.Info(ctx, map[string]interface{}{
+		"mentor.id": mentorID,
+		"chat.id":   chatID,
+	}, "Chat created")
 
 	return response, nil
 }
@@ -151,14 +148,13 @@ func (s *mentoringService) SendMessage(ctx context.Context, userID, chatID uuid.
 	message string) error {
 	chat, err := s.repo.GetChatByID(ctx, chatID)
 	if err != nil {
-		if err.Error() == "chat not found" {
+		if strings.HasPrefix(err.Error(), "chat not found") {
 			return errorpkg.ErrValidation().WithDetail("Chat not found")
 		}
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"chat.id": chatID,
-			"user.id": userID,
-		}, "[MentoringService][SendMessage] Failed to verify chat access")
+		}, "Failed to verify chat access")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -173,11 +169,10 @@ func (s *mentoringService) SendMessage(ctx context.Context, userID, chatID uuid.
 
 	messageID, err := s.uuid.NewV7()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"chat.id": chatID,
-			"user.id": userID,
-		}, "[MentoringService][SendMessage] Failed to generate message ID")
+		}, "Failed to generate message ID")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -189,10 +184,9 @@ func (s *mentoringService) SendMessage(ctx context.Context, userID, chatID uuid.
 	}
 
 	if err = s.repo.SendMessage(ctx, messageEntity); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"message": message,
-		}, "[MentoringService][SendMessage] Failed to send message")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error": err,
+		}, "Failed to send message")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -209,15 +203,14 @@ func (s *mentoringService) GetMessages(ctx context.Context, userID uuid.UUID, ch
 
 	chat, err := s.repo.GetChatByID(ctx, chatID)
 	if err != nil {
-		if err.Error() == "chat not found" {
+		if strings.HasPrefix(err.Error(), "chat not found") {
 			return nil, dto.PaginationResponse{},
 				errorpkg.ErrValidation().WithDetail("Chat not found")
 		}
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"chat.id": chatID,
-			"user.id": userID,
-		}, "[MentoringService][GetMessages] Failed to verify chat access")
+		}, "Failed to verify chat access")
 		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -229,11 +222,10 @@ func (s *mentoringService) GetMessages(ctx context.Context, userID uuid.UUID, ch
 
 	messages, pageResp, err := s.repo.GetMessages(ctx, chatID, pageReq)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"chat.id": chatID,
-			"user.id": userID,
-		}, "[MentoringService][GetMessages] Failed to get messages")
+		}, "Failed to get messages")
 		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -258,10 +250,10 @@ func (s *mentoringService) RegisterClient(userID uuid.UUID, chatID uuid.UUID, co
 
 	s.clients[chatIDStr][userID] = conn
 
-	log.Info(map[string]interface{}{
+	log.Info(nil, map[string]interface{}{
 		"user.id": userID,
 		"chat.id": chatID,
-	}, "[MentoringService][RegisterClient] Client registered for chat")
+	}, "Client registered for chat")
 }
 
 func (s *mentoringService) UnregisterClient(userID uuid.UUID, chatID uuid.UUID) {
@@ -277,10 +269,10 @@ func (s *mentoringService) UnregisterClient(userID uuid.UUID, chatID uuid.UUID) 
 			delete(s.clients, chatIDStr)
 		}
 
-		log.Info(map[string]interface{}{
+		log.Info(nil, map[string]interface{}{
 			"user.id": userID,
 			"chat.id": chatID,
-		}, "[MentoringService][UnregisterClient] Client unregistered from chat")
+		}, "Client unregistered from chat")
 	}
 }
 
@@ -301,11 +293,11 @@ func (s *mentoringService) BroadcastMessage(message *dto.MessageResponse, chatID
 		}
 
 		if err := conn.WriteJSON(message); err != nil {
-			log.Error(map[string]interface{}{
+			log.Error(nil, map[string]interface{}{
 				"error":   err,
 				"user.id": userID,
 				"chat.id": chatID,
-			}, "[MentoringService][BroadcastMessage] Failed to send message to client")
+			}, "Failed to send message to client")
 		}
 	}
 }

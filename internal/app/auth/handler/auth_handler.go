@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -123,7 +124,8 @@ func (c *authHandler) refreshToken(ctx *fiber.Ctx) error {
 func (c *authHandler) logout(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	err := c.svc.Logout(ctx.Context(), userID)

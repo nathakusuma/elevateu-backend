@@ -1,21 +1,23 @@
 package contract
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 )
 
 type ICategoryRepository interface {
-	CreateCategory(uuid2 uuid.UUID, name string) error
-	GetAllCategories() ([]entity.Category, error)
-	UpdateCategory(id uuid.UUID, name string) error
-	DeleteCategory(id uuid.UUID) error
+	CreateCategory(ctx context.Context, id uuid.UUID, name string) error
+	GetAllCategories(ctx context.Context) ([]entity.Category, error)
+	UpdateCategory(ctx context.Context, id uuid.UUID, name string) error
+	DeleteCategory(ctx context.Context, id uuid.UUID) error
 }
 
 type ICategoryService interface {
-	CreateCategory(name string) (entity.Category, error)
-	GetAllCategories() ([]entity.Category, error)
-	UpdateCategory(id uuid.UUID, name string) error
-	DeleteCategory(id uuid.UUID) error
+	CreateCategory(ctx context.Context, name string) (entity.Category, error)
+	GetAllCategories(ctx context.Context) ([]entity.Category, error)
+	UpdateCategory(ctx context.Context, id uuid.UUID, name string) error
+	DeleteCategory(ctx context.Context, id uuid.UUID) error
 }

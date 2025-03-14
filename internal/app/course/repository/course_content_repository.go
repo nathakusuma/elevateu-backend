@@ -84,7 +84,7 @@ func (r *courseContentRepository) UpdateVideo(ctx context.Context, id uuid.UUID,
 	err = tx.GetContext(ctx, &currentVideo, getQuery, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("video not found")
+			return fmt.Errorf("video not found: %w", err)
 		}
 		return err
 	}
@@ -145,7 +145,7 @@ func (r *courseContentRepository) DeleteVideo(ctx context.Context, id uuid.UUID)
 	err = tx.GetContext(ctx, &video, getQuery, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("video not found")
+			return fmt.Errorf("video not found: %w", err)
 		}
 		return fmt.Errorf("failed to get video: %w", err)
 	}
@@ -186,7 +186,7 @@ func (r *courseContentRepository) GetVideoByID(ctx context.Context, id uuid.UUID
 	err := r.db.GetContext(ctx, &video, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("video not found")
+			return nil, fmt.Errorf("video not found: %w", err)
 		}
 		return nil, fmt.Errorf("failed to get video: %w", err)
 	}
@@ -284,7 +284,7 @@ func (r *courseContentRepository) DeleteMaterial(ctx context.Context, id uuid.UU
 	err = tx.GetContext(ctx, &material, getQuery, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("material not found")
+			return fmt.Errorf("material not found: %w", err)
 		}
 		return fmt.Errorf("failed to get material: %w", err)
 	}
@@ -324,7 +324,7 @@ func (r *courseContentRepository) GetMaterialByID(ctx context.Context, id uuid.U
 	err := r.db.GetContext(ctx, &material, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("material not found")
+			return nil, fmt.Errorf("material not found: %w", err)
 		}
 		return nil, fmt.Errorf("failed to get material: %w", err)
 	}
@@ -351,7 +351,7 @@ func (r *courseContentRepository) GetCourseContents(ctx context.Context,
 		SELECT id, course_id, title, description, duration, is_free, "order", created_at, updated_at
 		FROM course_videos
 		WHERE course_id = $1
-		ORDER BY "order" ASC
+		ORDER BY "order"
 	`
 	var videos []*entity.CourseVideo
 	err = r.db.SelectContext(ctx, &videos, videosQuery, courseID)
@@ -364,7 +364,7 @@ func (r *courseContentRepository) GetCourseContents(ctx context.Context,
 		SELECT id, course_id, title, subtitle, is_free, "order", created_at, updated_at
 		FROM course_materials
 		WHERE course_id = $1
-		ORDER BY "order" ASC
+		ORDER BY "order"
 	`
 	var materials []*entity.CourseMaterial
 	err = r.db.SelectContext(ctx, &materials, materialsQuery, courseID)

@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
@@ -197,7 +198,8 @@ func (c *courseHandler) createEnrollment(ctx *fiber.Ctx) error {
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	err = c.svc.CreateEnrollment(ctx.Context(), courseID, userID)
@@ -211,7 +213,8 @@ func (c *courseHandler) createEnrollment(ctx *fiber.Ctx) error {
 func (c *courseHandler) getEnrolledCourses(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken()
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	var pageReq dto.PaginationRequest

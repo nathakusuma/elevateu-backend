@@ -54,29 +54,29 @@ func NewPaymentService(
 func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymentRequest) (string, error) {
 	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[PaymentService][createPayment] Failed to begin transaction")
+		}, "Failed to begin transaction")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
 
 	paymentID, err := s.uuid.NewV7()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[PaymentService][createPayment] Failed to generate payment ID")
+		}, "Failed to generate payment ID")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	token, err := s.paymentGateway.CreateTransaction(paymentID.String(), req.Amount)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[PaymentService][createPayment] Failed to create transaction in payment gateway")
+		}, "Failed to create transaction in payment gateway")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -92,42 +92,43 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 	}
 
 	if err2 := s.repo.CreatePayment(ctx, tx, paymentEntity); err2 != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err2,
 			"request": req,
-		}, "[PaymentService][createPayment] Failed to create payment")
+		}, "Failed to create payment")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	payloadJSON, err := sonic.Marshal(req.Payload)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[PaymentService][createPayment] Failed to marshal payment payload")
+		}, "Failed to marshal payment payload")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err := s.cache.Set(ctx, "payment:"+paymentEntity.ID.String(), string(payloadJSON), 1*time.Hour); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[PaymentService][createPayment] Failed to set payment payload in cache")
+		}, "Failed to set payment payload in cache")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err := tx.Commit(); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"request": req,
-		}, "[PaymentService][createPayment] Failed to commit transaction")
+		}, "Failed to commit transaction")
 		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	log.Info(map[string]interface{}{
+	log.Info(ctx, map[string]interface{}{
 		"payment.id":    paymentID,
 		"payment.token": token,
-	}, "[PaymentService][createPayment] Payment created")
+		"request":       req,
+	}, "Payment created")
 
 	return token, nil
 }
@@ -136,11 +137,11 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 	method string) error {
 	tx, err := s.txManager.BeginTx(ctx)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":          err,
 			"payment.id":     id,
 			"payment.status": status,
-		}, "[PaymentService][UpdatePaymentStatus] Failed to begin transaction")
+		}, "Failed to begin transaction")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
@@ -151,11 +152,11 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			return errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":          err,
 			"payment.id":     id,
 			"payment.status": status,
-		}, "[PaymentService][UpdatePaymentStatus] Failed to get payment by ID")
+		}, "Failed to get payment by ID")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -164,32 +165,32 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 
 	err = s.repo.UpdatePayment(ctx, tx, paymentEntity)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":          err,
 			"payment.id":     id,
 			"payment.status": status,
-		}, "[PaymentService][UpdatePaymentStatus] Failed to update payment")
+		}, "Failed to update payment")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if status == enum.PaymentStatusSuccess {
 		var payloadJSON string
 		if err = s.cache.Get(ctx, "payment:"+id.String(), &payloadJSON); err != nil {
-			traceID := log.ErrorWithTraceID(map[string]interface{}{
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 				"error":          err,
 				"payment.id":     id,
 				"payment.status": status,
-			}, "[PaymentService][UpdatePaymentStatus] Failed to get payment payload")
+			}, "Failed to get payment payload")
 			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 
 		var payload entity.PaymentPayload
 		if err = sonic.Unmarshal([]byte(payloadJSON), &payload); err != nil {
-			traceID := log.ErrorWithTraceID(map[string]interface{}{
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 				"error":          err,
 				"payment.id":     id,
 				"payment.status": status,
-			}, "[PaymentService][UpdatePaymentStatus] Failed to unmarshal payment payload")
+			}, "Failed to unmarshal payment payload")
 			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 
@@ -210,19 +211,19 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 		}
 	}
 
-	log.Info(map[string]interface{}{
-		"payment.id":     id,
-		"payment.status": status,
-	}, "[PaymentService][UpdatePaymentStatus] Payment status updated")
-
 	if err2 := tx.Commit(); err2 != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":          err2,
 			"payment.id":     id,
 			"payment.status": status,
-		}, "[PaymentService][UpdatePaymentStatus] Failed to commit transaction")
+		}, "Failed to commit transaction")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"payment.id":     id,
+		"payment.status": status,
+	}, "Payment status updated")
 
 	return nil
 }
@@ -242,6 +243,12 @@ func (s *paymentService) ProcessNotification(ctx context.Context, notificationPa
 	if err != nil {
 		return errorpkg.ErrValidation().WithDetail("order_id not valid")
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"payload": notificationPayload,
+		"status":  status,
+		"method":  method,
+	}, "incoming payment notification")
 
 	return s.UpdatePaymentStatus(ctx, orderID, status, method)
 }
@@ -350,13 +357,18 @@ func (s *paymentService) triggerSkillBoost(ctx context.Context, tx database.ITra
 	}
 
 	if err := s.repo.AddBoostSubscription(ctx, tx, payload.StudentID, subscribedUntil); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":          err,
 			"payment.id":     payment.ID,
 			"payment.status": payment.Status,
-		}, "[PaymentService][UpdatePaymentStatus] Failed to add boost subscription")
+		}, "Failed to add boost subscription")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"student.id":       student.ID,
+		"subscribed.until": subscribedUntil,
+	}, "Skill Boost subscription added")
 
 	return nil
 }
@@ -376,13 +388,18 @@ func (s *paymentService) triggerSkillChallenge(ctx context.Context, tx database.
 	}
 
 	if err := s.repo.AddChallengeSubscription(ctx, tx, payload.StudentID, subscribedUntil); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":          err,
 			"payment.id":     payment.ID,
 			"payment.status": payment.Status,
-		}, "[PaymentService][UpdatePaymentStatus] Failed to add challenge subscription")
+		}, "Failed to add challenge subscription")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"student.id":       student.ID,
+		"subscribed.until": subscribedUntil,
+	}, "Skill Challenge subscription added")
 
 	return nil
 }
@@ -408,24 +425,29 @@ func (s *paymentService) triggerSkillGuidance(ctx context.Context, tx database.I
 		Detail:   &detail,
 		Amount:   mentorSalary,
 	}); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"payment.id":     payment.ID,
 			"payment.status": payment.Status,
-		}, "[PaymentService][UpdatePaymentStatus] Failed to create mentor transaction history")
+		}, "Failed to create mentor transaction history")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err := s.repo.AddMentorBalance(ctx, tx, payload.MentorID, mentorSalary); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"payment.id":     payment.ID,
 			"payment.status": payment.Status,
-		}, "[PaymentService][UpdatePaymentStatus] Failed to add mentor balance")
+		}, "Failed to add mentor balance")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if _, err := s.mentoringSvc.CreateChat(ctx, payload.MentorID, payload.StudentID, false); err != nil {
 		return err
 	}
+
+	log.Info(ctx, map[string]interface{}{
+		"student.id": student.ID,
+		"mentor.id":  mentor.ID,
+	}, "Skill Guidance subscription added")
 
 	return nil
 }

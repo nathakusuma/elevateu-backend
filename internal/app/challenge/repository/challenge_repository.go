@@ -115,7 +115,7 @@ func (r *challengeRepository) GetChallenges(ctx context.Context, groupID uuid.UU
 	var challenges []*entity.Challenge
 	for rows.Next() {
 		var challenge entity.Challenge
-		if err := rows.StructScan(&challenge); err != nil {
+		if err = rows.StructScan(&challenge); err != nil {
 			return nil, dto.PaginationResponse{}, err
 		}
 		challenges = append(challenges, &challenge)
@@ -149,7 +149,7 @@ func (r *challengeRepository) GetChallengeByID(ctx context.Context, id uuid.UUID
 	err := r.db.GetContext(ctx, &challenge, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("challenge not found")
+			return nil, fmt.Errorf("challenge not found: %w", err)
 		}
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (r *challengeRepository) UpdateChallenge(ctx context.Context, id uuid.UUID,
 	err = tx.GetContext(ctx, &currentGroupID, getCurrentQuery, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("challenge not found")
+			return fmt.Errorf("challenge not found: %w", err)
 		}
 		return fmt.Errorf("failed to get current challenge: %w", err)
 	}
@@ -240,7 +240,7 @@ func (r *challengeRepository) DeleteChallenge(ctx context.Context, id uuid.UUID)
 	err = tx.GetContext(ctx, &groupID, getGroupQuery, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New("challenge not found")
+			return fmt.Errorf("challenge not found: %w", err)
 		}
 		return fmt.Errorf("failed to get challenge group: %w", err)
 	}

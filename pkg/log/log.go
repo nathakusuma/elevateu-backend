@@ -1,9 +1,12 @@
 package log
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/env"
 )
 
@@ -21,6 +25,14 @@ var (
 
 func NewLogger() *zerolog.Logger {
 	once.Do(func() {
+		zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+			fn := runtime.FuncForPC(pc)
+			if fn == nil {
+				return fmt.Sprintf("%s:%d", filepath.Base(file), line)
+			}
+			return fmt.Sprintf("%s:%d %s", filepath.Base(file), line, filepath.Base(fn.Name()))
+		}
+
 		writers := []io.Writer{
 			zerolog.ConsoleWriter{
 				Out:        os.Stderr,
@@ -50,61 +62,81 @@ func NewLogger() *zerolog.Logger {
 	return &logger
 }
 
-func logEvent(event *zerolog.Event, fields map[string]interface{}, msg string) {
+func logEvent(ctx context.Context, event *zerolog.Event, fields map[string]interface{}, msg string) {
+	// Skip 2 frames: logEvent and the log level function (e.g., Info)
+	event = event.Caller(2)
+
+	// Extract user ID from context if it exists
+	if ctx != nil {
+		if userID := ctx.Value(ctxkey.UserID); userID != nil {
+			if fields == nil {
+				fields = make(map[string]interface{})
+			}
+			fields["requester.id"] = userID
+		}
+	}
+
 	if len(fields) > 0 {
-		entries := make([]interface{}, 0, len(fields)*2)
+		entries := make([]interface{}, len(fields)*2)
+		i := 0
 		for k, v := range fields {
-			entries = append(entries, k, v)
+			entries[i] = k
+			entries[i+1] = v
+			i += 2
 		}
 		event.Fields(entries)
 	}
 	event.Msg(msg)
 }
 
-func Debug(fields map[string]interface{}, msg string) {
+func Debug(ctx context.Context, fields map[string]interface{}, msg string) {
 	if event := logger.Debug(); event.Enabled() {
-		logEvent(event, fields, msg)
+		logEvent(ctx, event, fields, msg)
 	}
 }
 
-func Info(fields map[string]interface{}, msg string) {
+func Info(ctx context.Context, fields map[string]interface{}, msg string) {
 	if event := logger.Info(); event.Enabled() {
-		logEvent(event, fields, msg)
+		logEvent(ctx, event, fields, msg)
 	}
 }
 
-func Warn(fields map[string]interface{}, msg string) {
+func Warn(ctx context.Context, fields map[string]interface{}, msg string) {
 	if event := logger.Warn(); event.Enabled() {
-		logEvent(event, fields, msg)
+		logEvent(ctx, event, fields, msg)
 	}
 }
 
-func Error(fields map[string]interface{}, msg string) {
+func Error(ctx context.Context, fields map[string]interface{}, msg string) {
 	if event := logger.Error(); event.Enabled() {
-		logEvent(event, fields, msg)
+		logEvent(ctx, event, fields, msg)
 	}
 }
 
-func ErrorWithTraceID(fields map[string]interface{}, msg string) uuid.UUID {
+func ErrorWithTraceID(ctx context.Context, fields map[string]interface{}, msg string) uuid.UUID {
 	traceID, err := uuid.NewRandom()
 	if err != nil {
-		Error(map[string]interface{}{
+		Error(ctx, map[string]interface{}{
 			"error": err.Error(),
 		}, "[log.ErrorWithTraceID] failed to generate trace ID")
 	}
 
+	if fields == nil {
+		fields = make(map[string]interface{})
+	}
+	fields["trace_id"] = traceID
+
 	if event := logger.Error(); event.Enabled() {
-		fields["trace_id"] = traceID
-		logEvent(event, fields, msg)
+		logEvent(ctx, event, fields, msg)
 	}
 
 	return traceID
 }
 
-func Fatal(fields map[string]interface{}, msg string) {
-	logEvent(logger.Fatal(), fields, msg)
+func Fatal(ctx context.Context, fields map[string]interface{}, msg string) {
+	logEvent(ctx, logger.Fatal(), fields, msg)
 }
 
-func Panic(fields map[string]interface{}, msg string) {
-	logEvent(logger.Panic(), fields, msg)
+func Panic(ctx context.Context, fields map[string]interface{}, msg string) {
+	logEvent(ctx, logger.Panic(), fields, msg)
 }

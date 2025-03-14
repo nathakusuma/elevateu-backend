@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
-	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
@@ -42,30 +41,23 @@ func NewUserService(
 }
 
 func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest) (uuid.UUID, error) {
-	creatorID := ctx.Value(ctxkey.UserID)
-	if creatorID == nil {
-		creatorID = "system"
-	}
-
 	// generate user ID
 	userID, err := s.uuid.NewV7()
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":        err,
-			"request":      req,
-			"requester.id": creatorID,
-		}, "[UserService][CreateUser] Failed to generate user ID")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":   err,
+			"request": req,
+		}, "Failed to generate user ID")
 
 		return uuid.Nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	hash, err2 := s.bcrypt.Hash(req.Password)
 	if err2 != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":        err2,
-			"request":      req,
-			"requester.id": creatorID,
-		}, "[UserService][CreateUser] Failed to hash password")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":   err2,
+			"request": req,
+		}, "Failed to hash password")
 
 		return uuid.Nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
@@ -109,37 +101,32 @@ func (s *userService) CreateUser(ctx context.Context, req *dto.CreateUserRequest
 		}
 
 		// other error
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":        err,
-			"request":      req,
-			"requester.id": creatorID,
-		}, "[UserService][CreateUser] Failed to create user")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":   err,
+			"request": req,
+		}, "Failed to create user")
 		return uuid.Nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	log.Info(map[string]interface{}{
-		"user":         user,
-		"requester.id": creatorID,
-	}, "[UserService][CreateUser] User created")
+	log.Info(ctx, map[string]interface{}{
+		"user": user,
+	}, "User created")
 
 	return userID, nil
 }
 
 func (s *userService) getUserByField(ctx context.Context, field string, value interface{}) (*entity.User, error) {
-	// get from repository
 	user, err := s.repo.GetUserByField(ctx, field, value)
 	if err != nil {
-		// if user not found
 		if strings.HasPrefix(err.Error(), "user not found") {
 			return nil, errorpkg.ErrNotFound()
 		}
 
-		// other error
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"field": field,
 			"value": value,
-		}, "[UserService][getUserByField] Failed to get user by field")
+		}, "Failed to get user by field")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -164,10 +151,10 @@ func (s *userService) GetUserByID(ctx context.Context, id uuid.UUID, isMinimal b
 	}
 
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error": err,
 			"user":  user,
-		}, "[UserService][GetUserByID] Failed to populate user response")
+		}, "Failed to populate user response")
 		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -184,10 +171,10 @@ func (s *userService) UpdatePassword(ctx context.Context, email, newPassword str
 	// hash new password
 	newPasswordHash, err := s.bcrypt.Hash(newPassword)
 	if err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"user.email": email,
-		}, "[UserService][UpdatePassword] Failed to hash password")
+		}, "Failed to hash password")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -197,16 +184,16 @@ func (s *userService) UpdatePassword(ctx context.Context, email, newPassword str
 	}
 
 	if err = s.repo.UpdateUser(ctx, userUpdates); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"user.email": email,
-		}, "[UserService][UpdatePassword] Failed to update user password")
+		}, "Failed to update user password")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	log.Info(map[string]interface{}{
+	log.Info(ctx, map[string]interface{}{
 		"user.email": email,
-	}, "[UserService][UpdatePassword] Password updated")
+	}, "Password updated")
 
 	return nil
 }
@@ -237,16 +224,16 @@ func (s *userService) UpdateUser(ctx context.Context, id uuid.UUID, req dto.Upda
 
 	// update user
 	if err := s.repo.UpdateUser(ctx, userUpdate); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"updates": userUpdate,
-		}, "[UserService][UpdateUser] Failed to update user")
+		}, "Failed to update user")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	log.Info(map[string]interface{}{
+	log.Info(ctx, map[string]interface{}{
 		"updates": userUpdate,
-	}, "[UserService][UpdateUser] User updated")
+	}, "User updated")
 
 	return nil
 }
@@ -259,10 +246,10 @@ func (s *userService) UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatar
 			return errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"user.id": id,
-		}, "[UserService][UpdateUserAvatar] Failed to get user")
+		}, "Failed to get user")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -281,16 +268,16 @@ func (s *userService) UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatar
 	}
 
 	if err = s.repo.UpdateUser(ctx, userUpdate); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"updates": userUpdate,
-		}, "[UserService][UpdateUserAvatar] Failed to update user avatar")
+		}, "Failed to update user avatar")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	log.Info(map[string]interface{}{
+	log.Info(ctx, map[string]interface{}{
 		"user.id": id,
-	}, "[UserService][UpdateUserAvatar] Avatar updated")
+	}, "Avatar updated")
 
 	return nil
 }
@@ -303,10 +290,9 @@ func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 			return errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"user.id": id,
-		}, "[UserService][DeleteUser] Failed to delete user")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error": err,
+		}, "Failed to delete user")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -317,17 +303,16 @@ func (s *userService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 			goto pass
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"user.id": id,
-		}, "[UserService][DeleteUser] Failed to delete avatar")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error": err,
+		}, "Failed to delete avatar")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 pass:
-	log.Info(map[string]interface{}{
+	log.Info(ctx, map[string]interface{}{
 		"user.id": id,
-	}, "[UserService][DeleteUser] User deleted")
+	}, "User deleted")
 
 	return nil
 }
@@ -339,10 +324,9 @@ func (s *userService) DeleteUserAvatar(ctx context.Context, id uuid.UUID) error 
 			return errorpkg.ErrNotFound()
 		}
 
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
-			"error":   err,
-			"user.id": id,
-		}, "[UserService][DeleteUserAvatar] Failed to delete avatar")
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error": err,
+		}, "Failed to delete avatar")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
@@ -354,16 +338,14 @@ func (s *userService) DeleteUserAvatar(ctx context.Context, id uuid.UUID) error 
 	}
 
 	if err := s.repo.UpdateUser(ctx, userUpdate); err != nil {
-		traceID := log.ErrorWithTraceID(map[string]interface{}{
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":   err,
 			"updates": userUpdate,
-		}, "[UserService][DeleteUserAvatar] Failed to update user avatar")
+		}, "Failed to update user avatar")
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	log.Info(map[string]interface{}{
-		"user.id": id,
-	}, "[UserService][DeleteUserAvatar] Avatar deleted")
+	log.Info(ctx, nil, "Avatar deleted")
 
 	return nil
 }
