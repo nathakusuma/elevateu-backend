@@ -170,14 +170,14 @@ func (h *mentoringHandler) getMessages(ctx *fiber.Ctx) error {
 func (h *mentoringHandler) handleWebSocket(conn *websocket.Conn) {
 	token := conn.Headers("Authorization")
 	if token == "" {
-		conn.WriteJSON(errorpkg.ErrNoBearerToken)
+		conn.WriteJSON(errorpkg.ErrNoBearerToken())
 		conn.Close()
 		return
 	}
 
 	validateResp, err := h.jwt.Validate(token)
 	if err != nil {
-		conn.WriteJSON(errorpkg.ErrInvalidBearerToken)
+		conn.WriteJSON(errorpkg.ErrInvalidBearerToken())
 		conn.Close()
 		return
 	}
