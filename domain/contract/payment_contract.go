@@ -20,8 +20,10 @@ type IPaymentRepository interface {
 		id uuid.UUID) (*entity.Payment, error)
 	UpdatePayment(ctx context.Context, tx database.ITransaction, payment *entity.Payment) error
 
-	GetPaymentsByStudent(ctx context.Context, studentID uuid.UUID) ([]*entity.Payment, error)
-	GetTransactionHistoriesByMentor(ctx context.Context, mentorID uuid.UUID) ([]*entity.MentorTransactionHistory, error)
+	GetPaymentsByStudent(ctx context.Context, studentID uuid.UUID,
+		pageReq dto.PaginationRequest) ([]*entity.Payment, dto.PaginationResponse, error)
+	GetTransactionHistoriesByMentor(ctx context.Context, mentorID uuid.UUID,
+		pageReq dto.PaginationRequest) ([]*entity.MentorTransactionHistory, dto.PaginationResponse, error)
 
 	AddBoostSubscription(ctx context.Context, txWrapper database.ITransaction,
 		studentID uuid.UUID, subscribedUntil time.Time) error
@@ -35,8 +37,10 @@ type IPaymentService interface {
 	UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status enum.PaymentStatus, method string) error
 	ProcessNotification(ctx context.Context, notificationPayload map[string]any) error
 
-	GetPaymentsByStudent(ctx context.Context, studentID uuid.UUID) ([]*dto.PaymentResponse, error)
-	GetTransactionHistoriesByMentor(ctx context.Context, mentorID uuid.UUID) ([]*entity.MentorTransactionHistory, error)
+	GetPaymentsByStudent(ctx context.Context, studentID uuid.UUID,
+		pageReq dto.PaginationRequest) ([]*dto.PaymentResponse, dto.PaginationResponse, error)
+	GetTransactionHistoriesByMentor(ctx context.Context, mentorID uuid.UUID,
+		pageReq dto.PaginationRequest) ([]*entity.MentorTransactionHistory, dto.PaginationResponse, error)
 
 	PaySkillBoost(ctx context.Context, studentID uuid.UUID) (string, error)
 	PaySkillChallenge(ctx context.Context, studentID uuid.UUID) (string, error)

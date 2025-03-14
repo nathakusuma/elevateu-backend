@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
+	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/entity"
 	"github.com/nathakusuma/elevateu-backend/internal/infra/database"
 )
@@ -108,9 +109,9 @@ func (r *paymentRepository) GetPaymentByID(ctx context.Context, txWrapper databa
 	return &payment, nil
 }
 
-func (r *paymentRepository) GetPaymentsByStudent(ctx context.Context, studentID uuid.UUID) ([]*entity.Payment, error) {
-	var payments []*entity.Payment
-	if err := sqlx.SelectContext(ctx, r.db, &payments, `
+func (r *paymentRepository) GetPaymentsByStudent(ctx context.Context, studentID uuid.UUID,
+	pageReq dto.PaginationRequest) ([]*entity.Payment, dto.PaginationResponse, error) {
+	baseQuery := `
 		SELECT
 			id,
 			user_id,
@@ -125,18 +126,68 @@ func (r *paymentRepository) GetPaymentsByStudent(ctx context.Context, studentID 
 			updated_at
 		FROM payments
 		WHERE user_id = $1
-		ORDER BY id DESC
-	`, studentID); err != nil {
-		return nil, fmt.Errorf("failed to get payments by student: %w", err)
+	`
+
+	var sqlQuery string
+	var args []interface{}
+	args = append(args, studentID)
+
+	if pageReq.Cursor != uuid.Nil {
+		var operator string
+		var orderDirection string
+
+		if pageReq.Direction == "next" {
+			operator = "<"
+			orderDirection = "DESC"
+		} else {
+			operator = ">"
+			orderDirection = "ASC"
+		}
+
+		sqlQuery = baseQuery + fmt.Sprintf(" AND id %s $2 ORDER BY id %s LIMIT $3", operator, orderDirection)
+		args = append(args, pageReq.Cursor, pageReq.Limit+1)
+	} else {
+		sqlQuery = baseQuery + " ORDER BY id DESC LIMIT $2"
+		args = append(args, pageReq.Limit+1)
 	}
 
-	return payments, nil
+	rows, err := r.db.QueryxContext(ctx, sqlQuery, args...)
+	if err != nil {
+		return nil, dto.PaginationResponse{}, fmt.Errorf("failed to get payments: %w", err)
+	}
+	defer rows.Close()
+
+	var payments []*entity.Payment
+	for rows.Next() {
+		var payment entity.Payment
+		if err := rows.StructScan(&payment); err != nil {
+			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to scan payment row: %w", err)
+		}
+		payments = append(payments, &payment)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, dto.PaginationResponse{}, fmt.Errorf("error iterating over payment rows: %w", err)
+	}
+
+	hasMore := false
+	if len(payments) > pageReq.Limit {
+		hasMore = true
+		payments = payments[:pageReq.Limit]
+	}
+
+	if pageReq.Direction == "prev" && pageReq.Cursor != uuid.Nil {
+		for i, j := 0, len(payments)-1; i < j; i, j = i+1, j-1 {
+			payments[i], payments[j] = payments[j], payments[i]
+		}
+	}
+
+	return payments, dto.PaginationResponse{HasMore: hasMore}, nil
 }
 
-func (r *paymentRepository) GetTransactionHistoriesByMentor(ctx context.Context, mentorID uuid.UUID) (
-	[]*entity.MentorTransactionHistory, error) {
-	var mentorTransactionHistories []*entity.MentorTransactionHistory
-	if err := sqlx.SelectContext(ctx, r.db, &mentorTransactionHistories, `
+func (r *paymentRepository) GetTransactionHistoriesByMentor(ctx context.Context, mentorID uuid.UUID,
+	pageReq dto.PaginationRequest) ([]*entity.MentorTransactionHistory, dto.PaginationResponse, error) {
+	baseQuery := `
 		SELECT
 			id,
 			mentor_id,
@@ -146,12 +197,63 @@ func (r *paymentRepository) GetTransactionHistoriesByMentor(ctx context.Context,
 			created_at
 		FROM mentor_transaction_histories
 		WHERE mentor_id = $1
-		ORDER BY id DESC
-	`, mentorID); err != nil {
-		return nil, fmt.Errorf("failed to get transaction histories by mentor: %w", err)
+	`
+
+	var sqlQuery string
+	var args []interface{}
+	args = append(args, mentorID)
+
+	if pageReq.Cursor != uuid.Nil {
+		var operator string
+		var orderDirection string
+
+		if pageReq.Direction == "next" {
+			operator = "<"
+			orderDirection = "DESC"
+		} else {
+			operator = ">"
+			orderDirection = "ASC"
+		}
+
+		sqlQuery = baseQuery + fmt.Sprintf(" AND id %s $2 ORDER BY id %s LIMIT $3", operator, orderDirection)
+		args = append(args, pageReq.Cursor, pageReq.Limit+1)
+	} else {
+		sqlQuery = baseQuery + " ORDER BY id DESC LIMIT $2"
+		args = append(args, pageReq.Limit+1)
 	}
 
-	return mentorTransactionHistories, nil
+	rows, err := r.db.QueryxContext(ctx, sqlQuery, args...)
+	if err != nil {
+		return nil, dto.PaginationResponse{}, fmt.Errorf("failed to get transaction histories: %w", err)
+	}
+	defer rows.Close()
+
+	var histories []*entity.MentorTransactionHistory
+	for rows.Next() {
+		var history entity.MentorTransactionHistory
+		if err := rows.StructScan(&history); err != nil {
+			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to scan transaction history row: %w", err)
+		}
+		histories = append(histories, &history)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, dto.PaginationResponse{}, fmt.Errorf("error iterating over transaction history rows: %w", err)
+	}
+
+	hasMore := false
+	if len(histories) > pageReq.Limit {
+		hasMore = true
+		histories = histories[:pageReq.Limit]
+	}
+
+	if pageReq.Direction == "prev" && pageReq.Cursor != uuid.Nil {
+		for i, j := 0, len(histories)-1; i < j; i, j = i+1, j-1 {
+			histories[i], histories[j] = histories[j], histories[i]
+		}
+	}
+
+	return histories, dto.PaginationResponse{HasMore: hasMore}, nil
 }
 
 func (r *paymentRepository) UpdatePayment(ctx context.Context, txWrapper database.ITransaction,

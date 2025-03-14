@@ -6,6 +6,7 @@ import (
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
+	"github.com/nathakusuma/elevateu-backend/domain/dto"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
@@ -137,13 +138,23 @@ func (h *paymentHandler) getPayments(ctx *fiber.Ctx) error {
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	payments, err := h.svc.GetPaymentsByStudent(ctx.Context(), userID)
+	var pageReq dto.PaginationRequest
+	if err := ctx.QueryParser(&pageReq); err != nil {
+		return errorpkg.ErrFailParseRequest()
+	}
+
+	if err := h.val.ValidateStruct(pageReq); err != nil {
+		return err
+	}
+
+	payments, pageResp, err := h.svc.GetPaymentsByStudent(ctx.Context(), userID, pageReq)
 	if err != nil {
 		return err
 	}
 
 	return ctx.JSON(map[string]any{
-		"payments": payments,
+		"payments":   payments,
+		"pagination": pageResp,
 	})
 }
 
@@ -154,12 +165,22 @@ func (h *paymentHandler) getMentorTransactionHistories(ctx *fiber.Ctx) error {
 		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	transactions, err := h.svc.GetTransactionHistoriesByMentor(ctx.Context(), mentorID)
+	var pageReq dto.PaginationRequest
+	if err := ctx.QueryParser(&pageReq); err != nil {
+		return errorpkg.ErrFailParseRequest()
+	}
+
+	if err := h.val.ValidateStruct(pageReq); err != nil {
+		return err
+	}
+
+	transactions, pageResp, err := h.svc.GetTransactionHistoriesByMentor(ctx.Context(), mentorID, pageReq)
 	if err != nil {
 		return err
 	}
 
 	return ctx.JSON(map[string]any{
 		"mentor_transaction_histories": transactions,
+		"pagination":                   pageResp,
 	})
 }

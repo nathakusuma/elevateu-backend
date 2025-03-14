@@ -133,39 +133,40 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 	return token, nil
 }
 
-func (s *paymentService) GetPaymentsByStudent(ctx context.Context,
-	studentID uuid.UUID) ([]*dto.PaymentResponse, error) {
-	payments, err := s.repo.GetPaymentsByStudent(ctx, studentID)
+func (s *paymentService) GetPaymentsByStudent(ctx context.Context, studentID uuid.UUID,
+	pageReq dto.PaginationRequest) ([]*dto.PaymentResponse, dto.PaginationResponse, error) {
+	payments, pageResp, err := s.repo.GetPaymentsByStudent(ctx, studentID, pageReq)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
 			"error":      err,
 			"student.id": studentID,
+			"pagination": pageReq,
 		}, "Failed to get payments by student")
-		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	var resp []*dto.PaymentResponse
-	for _, p := range payments {
-		paymentResp := &dto.PaymentResponse{}
-		paymentResp.PopulateFromEntity(p)
-		resp = append(resp, paymentResp)
+	responses := make([]*dto.PaymentResponse, len(payments))
+	for i, p := range payments {
+		responses[i] = &dto.PaymentResponse{}
+		responses[i].PopulateFromEntity(p)
 	}
 
-	return resp, nil
+	return responses, pageResp, nil
 }
 
-func (s *paymentService) GetTransactionHistoriesByMentor(ctx context.Context,
-	mentorID uuid.UUID) ([]*entity.MentorTransactionHistory, error) {
-	mentorTransactionHistories, err := s.repo.GetTransactionHistoriesByMentor(ctx, mentorID)
+func (s *paymentService) GetTransactionHistoriesByMentor(ctx context.Context, mentorID uuid.UUID,
+	pageReq dto.PaginationRequest) ([]*entity.MentorTransactionHistory, dto.PaginationResponse, error) {
+	histories, pageResp, err := s.repo.GetTransactionHistoriesByMentor(ctx, mentorID, pageReq)
 	if err != nil {
 		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
-			"error":     err,
-			"mentor.id": mentorID,
+			"error":      err,
+			"mentor.id":  mentorID,
+			"pagination": pageReq,
 		}, "Failed to get transaction histories by mentor")
-		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
-	return mentorTransactionHistories, nil
+	return histories, pageResp, nil
 }
 
 func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status enum.PaymentStatus,
