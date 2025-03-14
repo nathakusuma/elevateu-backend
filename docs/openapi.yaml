@@ -459,7 +459,6 @@ components:
         last_message_time:
           type: string
           format: date-time
-          nullable: true
 
     MessageResponse:
       type: object
@@ -473,6 +472,89 @@ components:
         message:
           type: string
         created_at:
+          type: string
+          format: date-time
+
+    PaymentStatus:
+      type: string
+      enum: [ success, failure, pending, challenge ]
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        user_id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        token:
+          type: string
+          examples:
+            - "mid-transaction-token-123456789"
+        amount:
+          type: integer
+          examples:
+            - 120000
+        title:
+          type: string
+          examples:
+            - "Skill Boost Subscription"
+        detail:
+          type: [ "string", "null" ]
+          examples:
+            - "Skill Boost Subscription for 30 days"
+        method:
+          type: string
+          examples:
+            - "credit_card"
+            - "gopay"
+            - "bca_va"
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        expired_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MentorTransactionHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        mentor_id:
+          type: string
+          format: uuid
+          examples:
+            - "01949e48-9f6b-796b-9611-3c9025493233"
+        title:
+          type: string
+          examples:
+            - "Pembayaran Mentor"
+        detail:
+          type: [ "string", "null" ]
+          examples:
+            - "Skill Guidance with Jane Doe"
+        amount:
+          type: integer
+          examples:
+            - 114000
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
           type: string
           format: date-time
 
@@ -848,6 +930,8 @@ tags:
     description: Challenge submission operations
   - name: Mentoring
     description: Mentoring and chat functionality
+  - name: Payments
+    description: Payment and subscription management
 
 paths:
   /auth/register/otp:
@@ -3761,3 +3845,229 @@ paths:
           description: Forbidden - User does not have access to this chat
         '404':
           description: Not Found - Chat not found
+
+  /payments/skill-boost:
+    post:
+      tags:
+        - Payments
+      summary: Pay for Skill Boost Subscription
+      description: Create a payment for the Skill Boost subscription (30 days). This gives users access to all courses. Price varies based on student badge level - 10% discount for Bronze, 20% for Silver, and 50% for Gold.
+      operationId: paySkillBoost
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - payment_token
+                properties:
+                  payment_token:
+                    type: string
+                    examples:
+                      - "mid-transaction-token-123456789"
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /payments/skill-challenge:
+    post:
+      tags:
+        - Payments
+      summary: Pay for Skill Challenge Subscription
+      description: Create a payment for the Skill Challenge subscription (30 days). This gives users access to premium challenges. Price varies based on student badge level - 10% discount for Bronze, 20% for Silver, and 50% for Gold.
+      operationId: paySkillChallenge
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - payment_token
+                properties:
+                  payment_token:
+                    type: string
+                    examples:
+                      - "mid-transaction-token-123456789"
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /payments/skill-guidance:
+    post:
+      tags:
+        - Payments
+      summary: Pay for Skill Guidance Session
+      description: Create a payment for a Skill Guidance session with a mentor (24 hour chat access). Price is determined by the mentor's set rate.
+      operationId: paySkillGuidance
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mentor_id
+              properties:
+                mentor_id:
+                  type: string
+                  format: uuid
+                  examples:
+                    - "01949e48-9f6b-796b-9611-3c9025493233"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - payment_token
+                properties:
+                  payment_token:
+                    type: string
+                    examples:
+                      - "mid-transaction-token-123456789"
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /payments/my:
+    get:
+      tags:
+        - Payments
+      summary: Get My Payments
+      description: Get a list of the current student's payment history with pagination.
+      operationId: getPayments
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 10
+          description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - payments
+                  - pagination
+                properties:
+                  payments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
+
+  /payments/mentor/transaction-histories:
+    get:
+      tags:
+        - Payments
+      summary: Get Mentor Transaction Histories
+      description: Get a list of transaction histories for a mentor with pagination. Only available to users with mentor role.
+      operationId: getMentorTransactionHistories
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 10
+          description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - mentor_transaction_histories
+                  - pagination
+                properties:
+                  mentor_transaction_histories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MentorTransactionHistory'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationResponse'
+        '400':
+          $ref: '#/components/responses/ErrFailParseRequest'
+        '401':
+          $ref: '#/components/responses/BearerTokenErrors'
+        '403':
+          $ref: '#/components/responses/ErrForbiddenRole'
+        '422':
+          $ref: '#/components/responses/ErrValidation'
+        '500':
+          $ref: '#/components/responses/ErrInternalServer'
