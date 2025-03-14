@@ -44,18 +44,18 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 	mentor, err := s.userRepo.GetUserByField(ctx, "id", mentorID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			return nil, errorpkg.ErrValidation.Build().WithDetail("Mentor not found")
+			return nil, errorpkg.ErrValidation().WithDetail("Mentor not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":     err,
 			"mentor.id": mentorID,
 		}, "[MentoringService][CreateChat] Failed to get mentor")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if mentor.Role != enum.UserRoleMentor {
-		return nil, errorpkg.ErrValidation.Build().WithDetail("User is not a mentor")
+		return nil, errorpkg.ErrValidation().WithDetail("User is not a mentor")
 	}
 
 	student, err := s.userRepo.GetUserByField(ctx, "id", studentID)
@@ -64,11 +64,11 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 			"error":      err,
 			"student.id": studentID,
 		}, "[MentoringService][CreateChat] Failed to get student")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if student.Role != enum.UserRoleStudent {
-		return nil, errorpkg.ErrValidation.Build().WithDetail("User is not a student")
+		return nil, errorpkg.ErrValidation().WithDetail("User is not a student")
 	}
 
 	currentChat, err := s.repo.GetChatByMentorAndStudent(ctx, mentorID, studentID)
@@ -79,12 +79,12 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 				"mentor.id":  mentorID,
 				"student.id": studentID,
 			}, "[MentoringService][CreateChat] Failed to get chat")
-			return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 	}
 
 	if isTrial && currentChat != nil {
-		return nil, errorpkg.ErrTrialUsed
+		return nil, errorpkg.ErrTrialUsed()
 	}
 
 	chatID, err := s.uuid.NewV7()
@@ -94,7 +94,7 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 			"mentor.id":  mentorID,
 			"student.id": studentID,
 		}, "[MentoringService][CreateChat] Failed to generate chat ID")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	expireDuration := 24 * time.Hour
@@ -126,13 +126,13 @@ func (s *mentoringService) CreateChat(ctx context.Context, mentorID,
 
 	if repoErr != nil {
 		if strings.HasPrefix(repoErr.Error(), "trial chat already exists") {
-			return nil, errorpkg.ErrTrialUsed
+			return nil, errorpkg.ErrTrialUsed()
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": repoErr,
 			"chat":  chat,
 		}, "[MentoringService][CreateChat] Failed to create chat")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	response := &dto.ChatResponse{}
@@ -152,23 +152,23 @@ func (s *mentoringService) SendMessage(ctx context.Context, userID, chatID uuid.
 	chat, err := s.repo.GetChatByID(ctx, chatID)
 	if err != nil {
 		if err.Error() == "chat not found" {
-			return errorpkg.ErrValidation.Build().WithDetail("Chat not found")
+			return errorpkg.ErrValidation().WithDetail("Chat not found")
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
 			"chat.id": chatID,
 			"user.id": userID,
 		}, "[MentoringService][SendMessage] Failed to verify chat access")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	isParticipant := chat.MentorID == userID || chat.StudentID == userID
 	if !isParticipant {
-		return errorpkg.ErrForbiddenUser.Build().WithDetail("You don't have access to this chat")
+		return errorpkg.ErrForbiddenUser().WithDetail("You don't have access to this chat")
 	}
 
 	if time.Now().After(chat.ExpiresAt) {
-		return errorpkg.ErrChatExpired
+		return errorpkg.ErrChatExpired()
 	}
 
 	messageID, err := s.uuid.NewV7()
@@ -178,7 +178,7 @@ func (s *mentoringService) SendMessage(ctx context.Context, userID, chatID uuid.
 			"chat.id": chatID,
 			"user.id": userID,
 		}, "[MentoringService][SendMessage] Failed to generate message ID")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	messageEntity := &entity.MentoringMessage{
@@ -193,7 +193,7 @@ func (s *mentoringService) SendMessage(ctx context.Context, userID, chatID uuid.
 			"error":   err,
 			"message": message,
 		}, "[MentoringService][SendMessage] Failed to send message")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	response := &dto.MessageResponse{}
@@ -211,20 +211,20 @@ func (s *mentoringService) GetMessages(ctx context.Context, userID uuid.UUID, ch
 	if err != nil {
 		if err.Error() == "chat not found" {
 			return nil, dto.PaginationResponse{},
-				errorpkg.ErrValidation.Build().WithDetail("Chat not found")
+				errorpkg.ErrValidation().WithDetail("Chat not found")
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
 			"chat.id": chatID,
 			"user.id": userID,
 		}, "[MentoringService][GetMessages] Failed to verify chat access")
-		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	isParticipant := chat.MentorID == userID || chat.StudentID == userID
 	if !isParticipant {
 		return nil, dto.PaginationResponse{},
-			errorpkg.ErrForbiddenUser.Build().WithDetail("You don't have access to this chat")
+			errorpkg.ErrForbiddenUser().WithDetail("You don't have access to this chat")
 	}
 
 	messages, pageResp, err := s.repo.GetMessages(ctx, chatID, pageReq)
@@ -234,7 +234,7 @@ func (s *mentoringService) GetMessages(ctx context.Context, userID uuid.UUID, ch
 			"chat.id": chatID,
 			"user.id": userID,
 		}, "[MentoringService][GetMessages] Failed to get messages")
-		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	responses := make([]*dto.MessageResponse, len(messages))

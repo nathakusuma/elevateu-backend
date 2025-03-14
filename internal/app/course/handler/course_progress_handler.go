@@ -40,17 +40,17 @@ func InitCourseProgressHandler(
 func (h *courseProgressHandler) updateVideoProgress(ctx *fiber.Ctx) error {
 	videoID, err := uuid.Parse(ctx.Params("videoId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid video ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid video ID")
 	}
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	var req dto.UpdateCourseVideoProgressRequest
 	if err = ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err = h.val.ValidateStruct(req); err != nil {
@@ -67,12 +67,12 @@ func (h *courseProgressHandler) updateVideoProgress(ctx *fiber.Ctx) error {
 func (h *courseProgressHandler) completeMaterial(ctx *fiber.Ctx) error {
 	materialID, err := uuid.Parse(ctx.Params("materialId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid material ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid material ID")
 	}
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	if err = h.svc.UpdateMaterialProgress(ctx.Context(), userID, materialID); err != nil {

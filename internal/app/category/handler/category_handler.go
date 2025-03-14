@@ -49,7 +49,7 @@ func (c *categoryHandler) createCategory(ctx *fiber.Ctx) error {
 
 	var req request
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(req); err != nil {
@@ -85,10 +85,10 @@ func (c *categoryHandler) updateCategory(ctx *fiber.Ctx) error {
 
 	var req request
 	if err := ctx.ParamsParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(req); err != nil {
@@ -97,7 +97,7 @@ func (c *categoryHandler) updateCategory(ctx *fiber.Ctx) error {
 
 	id, err := uuid.Parse(req.ID)
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid category ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid category ID")
 	}
 
 	if err2 := c.svc.UpdateCategory(id, req.Name); err2 != nil {
@@ -110,7 +110,7 @@ func (c *categoryHandler) updateCategory(ctx *fiber.Ctx) error {
 func (c *categoryHandler) deleteCategory(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid category ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid category ID")
 	}
 
 	if err2 := c.svc.DeleteCategory(id); err2 != nil {

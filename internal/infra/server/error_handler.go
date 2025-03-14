@@ -23,23 +23,22 @@ func errorHandler(ctx *fiber.Ctx, err error) error {
 	if errors.As(err, &apiErr) {
 		return ctx.Status(apiErr.Status).JSON(
 			apiErr.
-				Build().WithTypePrefix(typePrefix).
-				Build().WithInstance(env.GetEnv().AppURL + ctx.OriginalURL()),
+				WithTypePrefix(typePrefix).
+				WithInstance(env.GetEnv().AppURL + ctx.OriginalURL()),
 		)
 	}
 
 	var validationErr validator.ValidationErrors
 	if errors.As(err, &validationErr) {
 		return ctx.Status(fiber.StatusUnprocessableEntity).JSON(
-			errorpkg.ErrValidation.
-				Build().WithValidationErrors(validationErr).
-				Build().WithTypePrefix(typePrefix).
-				Build().WithInstance(env.GetEnv().AppURL + ctx.OriginalURL()),
+			errorpkg.ErrValidation().
+				WithValidationErrors(validationErr).
+				WithTypePrefix(typePrefix).
+				WithInstance(env.GetEnv().AppURL + ctx.OriginalURL()),
 		)
 	}
 
 	return ctx.Status(fiber.StatusInternalServerError).JSON(
-		errorpkg.ErrInternalServer.
-			Build().WithTypePrefix(typePrefix),
+		errorpkg.ErrInternalServer().WithTypePrefix(typePrefix),
 	)
 }

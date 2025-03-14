@@ -45,7 +45,7 @@ func (s *courseContentService) CreateVideo(ctx context.Context, courseID uuid.UU
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseContentService][CreateVideo] Failed to generate video ID")
-		return dto.CreateCourseVideoResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return dto.CreateCourseVideoResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	video := &entity.CourseVideo{
@@ -61,13 +61,13 @@ func (s *courseContentService) CreateVideo(ctx context.Context, courseID uuid.UU
 	err = s.contentRepo.CreateVideo(ctx, video)
 	if err != nil {
 		if strings.Contains(err.Error(), "course not found") {
-			return dto.CreateCourseVideoResponse{}, errorpkg.ErrValidation.Build().WithDetail("Course not found")
+			return dto.CreateCourseVideoResponse{}, errorpkg.ErrValidation().WithDetail("Course not found")
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 			"video": video,
 		}, "[CourseContentService][CreateVideo] Failed to create video")
-		return dto.CreateCourseVideoResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return dto.CreateCourseVideoResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	// Get signed URLs for uploading video and thumbnail
@@ -78,7 +78,7 @@ func (s *courseContentService) CreateVideo(ctx context.Context, courseID uuid.UU
 			"error":    err,
 			"video_id": videoID,
 		}, "[CourseContentService][CreateVideo] Failed to get video upload URL")
-		return dto.CreateCourseVideoResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return dto.CreateCourseVideoResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	thumbnailUploadURL, err := s.fileUtil.GetUploadSignedURL(
@@ -88,7 +88,7 @@ func (s *courseContentService) CreateVideo(ctx context.Context, courseID uuid.UU
 			"error":    err,
 			"video_id": videoID,
 		}, "[CourseContentService][CreateVideo] Failed to get thumbnail upload URL")
-		return dto.CreateCourseVideoResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return dto.CreateCourseVideoResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	response := dto.CreateCourseVideoResponse{
@@ -115,14 +115,14 @@ func (s *courseContentService) UpdateVideo(ctx context.Context, id uuid.UUID, re
 	err := s.contentRepo.UpdateVideo(ctx, id, updates)
 	if err != nil {
 		if err.Error() == "video not found" {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":    err,
 			"video_id": id,
 			"updates":  updates,
 		}, "[CourseContentService][UpdateVideo] Failed to update video")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil
@@ -132,13 +132,13 @@ func (s *courseContentService) DeleteVideo(ctx context.Context, id uuid.UUID) er
 	err := s.contentRepo.DeleteVideo(ctx, id)
 	if err != nil {
 		if err.Error() == "video not found" {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":    err,
 			"video_id": id,
 		}, "[CourseContentService][DeleteVideo] Failed to delete video")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	// Delete files from storage
@@ -168,13 +168,13 @@ func (s *courseContentService) GetVideoUploadURLs(ctx context.Context, id uuid.U
 	_, err := s.contentRepo.GetVideoByID(ctx, id)
 	if err != nil {
 		if err.Error() == "video not found" {
-			return "", "", errorpkg.ErrNotFound
+			return "", "", errorpkg.ErrNotFound()
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":    err,
 			"video_id": id,
 		}, "[CourseContentService][GetVideoUploadURLs] Failed to get video")
-		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	videoURL, err := s.fileUtil.GetUploadSignedURL(
@@ -184,7 +184,7 @@ func (s *courseContentService) GetVideoUploadURLs(ctx context.Context, id uuid.U
 			"error":    err,
 			"video_id": id,
 		}, "[CourseContentService][GetVideoUploadURLs] Failed to get video upload URL")
-		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	thumbnailURL, err := s.fileUtil.GetUploadSignedURL(
@@ -194,7 +194,7 @@ func (s *courseContentService) GetVideoUploadURLs(ctx context.Context, id uuid.U
 			"error":    err,
 			"video_id": id,
 		}, "[CourseContentService][GetVideoUploadURLs] Failed to get thumbnail upload URL")
-		return "", "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return videoURL, thumbnailURL, nil
@@ -207,7 +207,7 @@ func (s *courseContentService) CreateMaterial(ctx context.Context, courseID uuid
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseContentService][CreateMaterial] Failed to generate material ID")
-		return dto.CreateCourseMaterialResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return dto.CreateCourseMaterialResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	material := &entity.CourseMaterial{
@@ -222,13 +222,13 @@ func (s *courseContentService) CreateMaterial(ctx context.Context, courseID uuid
 	err = s.contentRepo.CreateMaterial(ctx, material)
 	if err != nil {
 		if strings.Contains(err.Error(), "course not found") {
-			return dto.CreateCourseMaterialResponse{}, errorpkg.ErrValidation.Build().WithDetail("Course not found")
+			return dto.CreateCourseMaterialResponse{}, errorpkg.ErrValidation().WithDetail("Course not found")
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":    err,
 			"material": material,
 		}, "[CourseContentService][CreateMaterial] Failed to create material")
-		return dto.CreateCourseMaterialResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return dto.CreateCourseMaterialResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	// Get signed URL for uploading material
@@ -239,7 +239,7 @@ func (s *courseContentService) CreateMaterial(ctx context.Context, courseID uuid
 			"error":       err,
 			"material_id": materialID,
 		}, "[CourseContentService][CreateMaterial] Failed to get material upload URL")
-		return dto.CreateCourseMaterialResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return dto.CreateCourseMaterialResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	response := dto.CreateCourseMaterialResponse{
@@ -265,14 +265,14 @@ func (s *courseContentService) UpdateCourseMaterial(ctx context.Context, id uuid
 	err := s.contentRepo.UpdateMaterial(ctx, id, updates)
 	if err != nil {
 		if err.Error() == "material not found" {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
 			"material_id": id,
 			"updates":     updates,
 		}, "[CourseContentService][UpdateCourseMaterial] Failed to update material")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil
@@ -282,13 +282,13 @@ func (s *courseContentService) DeleteCourseMaterial(ctx context.Context, id uuid
 	err := s.contentRepo.DeleteMaterial(ctx, id)
 	if err != nil {
 		if err.Error() == "material not found" {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
 			"material_id": id,
 		}, "[CourseContentService][DeleteCourseMaterial] Failed to delete material")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	// Delete file from storage
@@ -309,13 +309,13 @@ func (s *courseContentService) GetMaterialUploadURL(ctx context.Context, id uuid
 	_, err := s.contentRepo.GetMaterialByID(ctx, id)
 	if err != nil {
 		if err.Error() == "material not found" {
-			return "", errorpkg.ErrNotFound
+			return "", errorpkg.ErrNotFound()
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
 			"material_id": id,
 		}, "[CourseContentService][GetMaterialUploadURL] Failed to get material")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	url, err := s.fileUtil.GetUploadSignedURL(
@@ -325,7 +325,7 @@ func (s *courseContentService) GetMaterialUploadURL(ctx context.Context, id uuid
 			"error":       err,
 			"material_id": id,
 		}, "[CourseContentService][GetMaterialUploadURL] Failed to get material upload URL")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return url, nil
@@ -336,7 +336,7 @@ func (s *courseContentService) GetCourseContents(ctx context.Context,
 	userID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
 	isSubscribedBoost, ok2 := ctx.Value(ctxkey.IsSubscribedBoost).(bool)
 	if !ok || !ok2 {
-		return nil, errorpkg.ErrInvalidBearerToken
+		return nil, errorpkg.ErrInvalidBearerToken()
 	}
 
 	isEnrolled := true
@@ -351,7 +351,7 @@ func (s *courseContentService) GetCourseContents(ctx context.Context,
 			"course_id": courseID,
 			"user_id":   userID,
 		}, "[CourseContentService][GetCourseContents] Failed to get enrollment")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 pass:
@@ -361,13 +361,13 @@ pass:
 	videos, materials, err := s.contentRepo.GetCourseContents(ctx, courseID)
 	if err != nil {
 		if strings.Contains(err.Error(), "course not found") {
-			return nil, errorpkg.ErrValidation.Build().WithDetail("Course not found")
+			return nil, errorpkg.ErrValidation().WithDetail("Course not found")
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":     err,
 			"course_id": courseID,
 		}, "[CourseContentService][GetCourseContents] Failed to get course contents")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	totalContents := len(videos) + len(materials)
@@ -385,7 +385,7 @@ pass:
 					"error":    err,
 					"video_id": videos[videoIdx].ID,
 				}, "[CourseContentService][GetCourseContents] Failed to populate video response")
-				return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+				return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 			}
 			videoIdx++
 		} else {
@@ -397,7 +397,7 @@ pass:
 					"error":       err,
 					"material_id": materials[materialIdx].ID,
 				}, "[CourseContentService][GetCourseContents] Failed to populate material response")
-				return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+				return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 			}
 			materialIdx++
 		}
@@ -413,7 +413,7 @@ pass:
 				"error":    err,
 				"video_id": videos[videoIdx].ID,
 			}, "[CourseContentService][GetCourseContents] Failed to populate video response")
-			return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 		videoIdx++
 		resultIdx++
@@ -428,7 +428,7 @@ pass:
 				"error":       err,
 				"material_id": materials[materialIdx].ID,
 			}, "[CourseContentService][GetCourseContents] Failed to populate material response")
-			return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 		materialIdx++
 		resultIdx++

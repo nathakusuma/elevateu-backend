@@ -85,21 +85,21 @@ func (j *jwtStruct) Validate(token string) (ValidateJWTResponse, error) {
 	var claims Claims
 	err := j.Decode(token, &claims)
 	if err != nil {
-		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken
+		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken()
 	}
 
 	expirationTime, err := claims.GetExpirationTime()
 	if err != nil {
-		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken
+		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken()
 	}
 
 	if expirationTime.Before(time.Now()) {
-		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken
+		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken()
 	}
 
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
-		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken
+		return ValidateJWTResponse{}, errorpkg.ErrInvalidBearerToken()
 	}
 
 	return ValidateJWTResponse{

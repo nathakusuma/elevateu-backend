@@ -45,7 +45,7 @@ func NewFileUtil(client *storage.Client) IFileUtil {
 func (u *fileUtil) ValidateAndUploadFile(ctx context.Context, header *multipart.FileHeader, allowedTypes []string,
 	path string) (string, error) {
 	if header.Size > 2*MegaByte {
-		return "", errorpkg.ErrFileTooLarge.Build().WithDetail(
+		return "", errorpkg.ErrFileTooLarge().WithDetail(
 			fmt.Sprintf("File size is too large (%s). Please upload a file less than 2MB",
 				ByteToAppropriateUnit(header.Size)))
 	}
@@ -56,7 +56,7 @@ func (u *fileUtil) ValidateAndUploadFile(ctx context.Context, header *multipart.
 			"error": err,
 			"path":  path,
 		}, "[FileUtil][ValidateAndUploadFile] Failed to open file")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer file.Close()
 
@@ -66,11 +66,11 @@ func (u *fileUtil) ValidateAndUploadFile(ctx context.Context, header *multipart.
 			"error": err,
 			"path":  path,
 		}, "[FileUtil][ValidateAndUploadFile] Failed to check MIME file type")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if !ok {
-		return "", errorpkg.ErrInvalidFileFormat.Build().WithDetail(
+		return "", errorpkg.ErrInvalidFileFormat().WithDetail(
 			fmt.Sprintf("File type %s is not allowed. Please upload a valid file", fileType))
 	}
 
@@ -80,7 +80,7 @@ func (u *fileUtil) ValidateAndUploadFile(ctx context.Context, header *multipart.
 			"error": err,
 			"path":  path,
 		}, "[FileUtil][ValidateAndUploadFile] Failed to upload file")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return url, nil

@@ -49,13 +49,13 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 	req dto.CreateChallengeSubmissionRequest) error {
 	userID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	challenge, err := s.challengeRepo.GetChallengeByID(ctx, req.ChallengeID)
 	if err != nil {
 		if err.Error() == "challenge not found" {
-			return errorpkg.ErrValidation.Build().WithDetail("Challenge not found")
+			return errorpkg.ErrValidation().WithDetail("Challenge not found")
 		}
 	}
 
@@ -66,7 +66,7 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 			"request": req,
 			"user.id": userID,
 		}, "[ChallengeSubmissionService][CreateSubmission] Failed to generate submission ID")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	submission := &entity.ChallengeSubmission{
@@ -83,21 +83,21 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 			"submission": submission,
 			"user.id":    userID,
 		}, "[ChallengeSubmissionService][CreateSubmission] Failed to begin transaction for adding points")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
 
 	err = s.repo.CreateSubmission(ctx, tx, submission)
 	if err != nil {
 		if strings.Contains(err.Error(), "student has already submitted") {
-			return errorpkg.ErrStudentAlreadySubmittedChallenge
+			return errorpkg.ErrStudentAlreadySubmittedChallenge()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":      err,
 			"submission": submission,
 		}, "[ChallengeSubmissionService][CreateSubmission] Failed to create submission")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	var points int
@@ -117,7 +117,7 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 			"submission": submission,
 			"points":     points,
 		}, "[ChallengeSubmissionService][CreateSubmission] Failed to add points to student")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -125,7 +125,7 @@ func (s *challengeSubmissionService) CreateSubmission(ctx context.Context,
 			"error":      err,
 			"submission": submission,
 		}, "[ChallengeSubmissionService][CreateSubmission] Failed to commit transaction for adding points")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil
@@ -135,13 +135,13 @@ func (s *challengeSubmissionService) GetSubmissionAsStudent(ctx context.Context,
 	challengeID uuid.UUID) (*dto.ChallengeSubmissionResponse, error) {
 	studentID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return nil, errorpkg.ErrInvalidBearerToken
+		return nil, errorpkg.ErrInvalidBearerToken()
 	}
 
 	submission, err := s.repo.GetSubmissionByStudent(ctx, challengeID, studentID)
 	if err != nil {
 		if err.Error() == "submission not found" {
-			return nil, errorpkg.ErrNotFound
+			return nil, errorpkg.ErrNotFound()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -149,7 +149,7 @@ func (s *challengeSubmissionService) GetSubmissionAsStudent(ctx context.Context,
 			"challengeID": challengeID,
 			"studentID":   studentID,
 		}, "[ChallengeSubmissionService][GetSubmissionAsStudent] Failed to get submission")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	resp := &dto.ChallengeSubmissionResponse{}
@@ -158,7 +158,7 @@ func (s *challengeSubmissionService) GetSubmissionAsStudent(ctx context.Context,
 			"error":      err,
 			"submission": submission,
 		}, "[ChallengeSubmissionService][GetSubmissionAsStudent] Failed to populate response")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return resp, nil
@@ -173,7 +173,7 @@ func (s *challengeSubmissionService) GetSubmissionsAsMentor(ctx context.Context,
 			"challengeID": challengeID,
 			"pagination":  pageReq,
 		}, "[ChallengeSubmissionService][GetSubmissionsAsMentor] Failed to get submissions")
-		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	resp := make([]*dto.ChallengeSubmissionResponse, len(submissions))
@@ -184,7 +184,7 @@ func (s *challengeSubmissionService) GetSubmissionsAsMentor(ctx context.Context,
 				"error":      err,
 				"submission": submission,
 			}, "[ChallengeSubmissionService][GetSubmissionsAsMentor] Failed to populate response")
-			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 	}
 
@@ -195,13 +195,13 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 	submissionID uuid.UUID, req dto.CreateChallengeSubmissionFeedbackRequest) error {
 	mentorID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	submission, err := s.repo.GetSubmissionByID(ctx, submissionID)
 	if err != nil {
 		if err.Error() == "submission not found" {
-			return errorpkg.ErrValidation.WithDetail("Submission not found")
+			return errorpkg.ErrValidation().WithDetail("Submission not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -209,7 +209,7 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 			"submission.id": submissionID,
 			"mentor.id":     mentorID,
 		}, "[ChallengeSubmissionService][CreateFeedback] Failed to get submission")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	feedback := &entity.ChallengeSubmissionFeedback{
@@ -226,14 +226,14 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 			"feedback":  feedback,
 			"mentor.id": mentorID,
 		}, "[ChallengeSubmissionService][CreateFeedback] Failed to begin transaction for adding points")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
 
 	err = s.repo.CreateFeedback(ctx, tx, feedback)
 	if err != nil {
 		if strings.Contains(err.Error(), "feedback already exists") {
-			return errorpkg.ErrMentorAlreadySubmittedFeedback
+			return errorpkg.ErrMentorAlreadySubmittedFeedback()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -241,7 +241,7 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 			"feedback":  feedback,
 			"mentor.id": mentorID,
 		}, "[ChallengeSubmissionService][CreateFeedback] Failed to create feedback")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	var points int
@@ -262,7 +262,7 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 			"feedback": feedback,
 			"points":   points,
 		}, "[ChallengeSubmissionService][CreateFeedback] Failed to add points to student")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -270,7 +270,7 @@ func (s *challengeSubmissionService) CreateFeedback(ctx context.Context,
 			"error":    err,
 			"feedback": feedback,
 		}, "[ChallengeSubmissionService][CreateFeedback] Failed to commit transaction for adding points")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil

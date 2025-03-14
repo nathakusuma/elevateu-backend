@@ -49,7 +49,7 @@ func InitChallengeHandler(
 func (h *challengeHandler) createChallenge(ctx *fiber.Ctx) error {
 	var req dto.CreateChallengeRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {
@@ -73,12 +73,12 @@ func (h *challengeHandler) getChallenges(ctx *fiber.Ctx) error {
 	}
 
 	if err := ctx.QueryParser(&query); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	var pageReq dto.PaginationRequest
 	if err := ctx.QueryParser(&pageReq); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(query); err != nil {
@@ -102,7 +102,7 @@ func (h *challengeHandler) getChallenges(ctx *fiber.Ctx) error {
 func (h *challengeHandler) getChallengeDetail(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid challenge ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid challenge ID")
 	}
 
 	challenge, err := h.svc.GetChallengeDetail(ctx.Context(), id)
@@ -118,12 +118,12 @@ func (h *challengeHandler) getChallengeDetail(ctx *fiber.Ctx) error {
 func (h *challengeHandler) updateChallenge(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid challenge ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid challenge ID")
 	}
 
 	var req dto.UpdateChallengeRequest
 	if err = ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err = h.val.ValidateStruct(req); err != nil {
@@ -140,7 +140,7 @@ func (h *challengeHandler) updateChallenge(ctx *fiber.Ctx) error {
 func (h *challengeHandler) deleteChallenge(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid challenge ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid challenge ID")
 	}
 
 	if err = h.svc.DeleteChallenge(ctx.Context(), id); err != nil {

@@ -13,12 +13,12 @@ import (
 func (m *Middleware) RequireAuthenticated(ctx *fiber.Ctx) error {
 	header := ctx.Get("Authorization")
 	if header == "" {
-		return errorpkg.ErrNoBearerToken
+		return errorpkg.ErrNoBearerToken()
 	}
 
 	headerSlice := strings.Split(header, " ")
 	if len(headerSlice) != 2 || headerSlice[0] != "Bearer" {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	token := headerSlice[1]
@@ -41,7 +41,7 @@ func (m *Middleware) RequireOneOfRoles(roles ...enum.UserRole) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		userRole, ok := ctx.Locals(ctxkey.UserRole).(enum.UserRole)
 		if !ok {
-			return errorpkg.ErrInvalidBearerToken
+			return errorpkg.ErrInvalidBearerToken()
 		}
 
 		for _, role := range roles {
@@ -50,6 +50,6 @@ func (m *Middleware) RequireOneOfRoles(roles ...enum.UserRole) fiber.Handler {
 			}
 		}
 
-		return errorpkg.ErrForbiddenRole
+		return errorpkg.ErrForbiddenRole()
 	}
 }

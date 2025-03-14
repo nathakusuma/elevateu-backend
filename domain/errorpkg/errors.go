@@ -5,124 +5,164 @@ import (
 )
 
 // General
-var (
-	ErrInternalServer = NewError(http.StatusInternalServerError,
+func ErrInternalServer() *ResponseError {
+	return newError(http.StatusInternalServerError,
 		"internal-server-error",
 		"Something went wrong in our server. Please try again later.")
+}
 
-	ErrFailParseRequest = NewError(http.StatusBadRequest,
+func ErrFailParseRequest() *ResponseError {
+	return newError(http.StatusBadRequest,
 		"fail-parse-request",
 		"Failed to parse request. Please check your request format.")
+}
 
-	ErrForbiddenRole = NewError(http.StatusForbidden,
+func ErrForbiddenRole() *ResponseError {
+	return newError(http.StatusForbidden,
 		"forbidden-role",
 		"You're not allowed to access this resource.")
+}
 
-	ErrForbiddenUser = NewError(http.StatusForbidden,
+func ErrForbiddenUser() *ResponseError {
+	return newError(http.StatusForbidden,
 		"forbidden-user",
 		"You're not allowed to access this resource.")
+}
 
-	ErrNotSubscribed = NewError(http.StatusForbidden,
+func ErrNotSubscribed() *ResponseError {
+	return newError(http.StatusForbidden,
 		"not-subscribed",
 		"You're not subscribed to this feature. Please subscribe first.")
+}
 
-	ErrNotFound = NewError(http.StatusNotFound,
+func ErrNotFound() *ResponseError {
+	return newError(http.StatusNotFound,
 		"not-found",
 		"Resource not found.")
+}
 
-	ErrFileTooLarge = NewError(http.StatusRequestEntityTooLarge,
+func ErrFileTooLarge() *ResponseError {
+	return newError(http.StatusRequestEntityTooLarge,
 		"file-too-large",
 		"File size is too large. Please upload smaller file.")
+}
 
-	ErrInvalidFileFormat = NewError(http.StatusUnprocessableEntity,
+func ErrInvalidFileFormat() *ResponseError {
+	return newError(http.StatusUnprocessableEntity,
 		"invalid-file-format",
 		"Invalid file format. Please upload a valid file.")
+}
 
-	ErrValidation = NewError(http.StatusUnprocessableEntity, "validation-error",
+func ErrValidation() *ResponseError {
+	return newError(http.StatusUnprocessableEntity,
+		"validation-error",
 		"There are invalid fields in your request. Please check and try again")
-)
+}
 
 // Auth
-var (
-	ErrCredentialsNotMatch = NewError(http.StatusUnauthorized,
+func ErrCredentialsNotMatch() *ResponseError {
+	return newError(http.StatusUnauthorized,
 		"credentials-not-match",
 		"Credentials do not match. Please try again.")
+}
 
-	ErrInvalidBearerToken = NewError(http.StatusUnauthorized,
+func ErrInvalidBearerToken() *ResponseError {
+	return newError(http.StatusUnauthorized,
 		"invalid-bearer-token",
 		"Your auth session is invalid. Please renew your auth session.")
+}
 
-	ErrInvalidOTP = NewError(http.StatusUnauthorized,
+func ErrInvalidOTP() *ResponseError {
+	return newError(http.StatusUnauthorized,
 		"invalid-otp",
 		"Invalid OTP. Please try again or request a new OTP.")
+}
 
-	ErrInvalidRefreshToken = NewError(http.StatusUnauthorized,
+func ErrInvalidRefreshToken() *ResponseError {
+	return newError(http.StatusUnauthorized,
 		"invalid-refresh-token",
 		"Auth session is invalid. Please login again.")
+}
 
-	ErrNoBearerToken = NewError(http.StatusUnauthorized,
+func ErrNoBearerToken() *ResponseError {
+	return newError(http.StatusUnauthorized,
 		"no-bearer-token",
 		"You're not logged in. Please login first.")
+}
 
-	ErrEmailAlreadyRegistered = NewError(http.StatusConflict,
+func ErrEmailAlreadyRegistered() *ResponseError {
+	return newError(http.StatusConflict,
 		"email-already-registered",
 		"Email already registered. Please login or use another email.")
-)
+}
 
 // Category
-var (
-	ErrCategoryNameExists = NewError(http.StatusConflict,
+func ErrCategoryNameExists() *ResponseError {
+	return newError(http.StatusConflict,
 		"category-name-exists",
 		"Category name already exists. Please use another name.")
-)
+}
 
 // Courses
-var (
-	ErrStudentAlreadyEnrolled = NewError(http.StatusConflict,
+func ErrStudentAlreadyEnrolled() *ResponseError {
+	return newError(http.StatusConflict,
 		"student-already-enrolled",
 		"You have already enrolled in this course.")
+}
 
-	ErrCannotFeedbackUnenrolledCourse = NewError(http.StatusUnprocessableEntity,
+func ErrCannotFeedbackUnenrolledCourse() *ResponseError {
+	return newError(http.StatusUnprocessableEntity,
 		"cannot-feedback-unenrolled-course",
 		"You cannot give feedback to unenrolled course.")
+}
 
-	ErrCannotFeedbackUncompletedCourse = NewError(http.StatusUnprocessableEntity,
+func ErrCannotFeedbackUncompletedCourse() *ResponseError {
+	return newError(http.StatusUnprocessableEntity,
 		"cannot-feedback-uncompleted-course",
 		"You cannot give feedback to uncompleted course.")
+}
 
-	ErrStudentAlreadySubmittedFeedback = NewError(http.StatusConflict,
+func ErrStudentAlreadySubmittedFeedback() *ResponseError {
+	return newError(http.StatusConflict,
 		"student-already-submitted-feedback",
 		"You have already submitted feedback for this course.")
-)
+}
 
 // Challenges
-var (
-	ErrStudentAlreadySubmittedChallenge = NewError(http.StatusConflict,
+func ErrStudentAlreadySubmittedChallenge() *ResponseError {
+	return newError(http.StatusConflict,
 		"student-already-submitted-challenge",
 		"You have already submitted for this challenge.")
-	ErrMentorAlreadySubmittedFeedback = NewError(http.StatusConflict,
+}
+
+func ErrMentorAlreadySubmittedFeedback() *ResponseError {
+	return newError(http.StatusConflict,
 		"mentor-already-submitted-feedback",
 		"A mentor has already submitted feedback for this submission.")
-)
+}
 
 // Mentoring
-var (
-	ErrFailReadMessage = NewError(http.StatusBadRequest,
+func ErrFailReadMessage() *ResponseError {
+	return newError(http.StatusBadRequest,
 		"fail-read-message",
 		"Failed to read message. Please try again.")
+}
 
-	ErrChatExpired = NewError(http.StatusForbidden,
+func ErrChatExpired() *ResponseError {
+	return newError(http.StatusForbidden,
 		"chat-expired",
 		"Chat has expired. Please purchase a new Skill Guidance session.")
+}
 
-	ErrTrialUsed = NewError(http.StatusConflict,
+func ErrTrialUsed() *ResponseError {
+	return newError(http.StatusConflict,
 		"trial-used",
 		"Trial chat has been used. Please purchase Skill Guidance.")
-)
+}
 
 // Payment
-var (
-	ErrOKIgnore = NewError(http.StatusOK,
+func ErrOKIgnore() *ResponseError {
+	return newError(http.StatusOK,
 		"ok-ignore",
 		"OK to ignore this error.") // For midtrans test notification
-)
+}

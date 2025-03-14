@@ -22,40 +22,12 @@ func (e *ResponseError) Error() string {
 	return e.Title
 }
 
-func NewError(status int, errType, title string) *ResponseError {
+func newError(status int, errType, title string) *ResponseError {
 	return &ResponseError{
 		Type:   errType,
 		Title:  title,
 		Status: status,
 	}
-}
-
-func (e *ResponseError) Build() *ResponseError {
-	if e == nil {
-		return nil
-	}
-
-	copiedErr := &ResponseError{
-		Type:     e.Type,
-		Title:    e.Title,
-		Status:   e.Status,
-		Detail:   e.Detail,
-		Instance: e.Instance,
-	}
-
-	// Deep copy TraceID if it exists
-	if e.TraceID != nil {
-		traceIDCopy := *e.TraceID
-		copiedErr.TraceID = &traceIDCopy
-	}
-
-	// Deep copy ValidationErrors if they exist
-	if len(e.ValidationErrors) > 0 {
-		copiedErr.ValidationErrors = make(validator.ValidationErrors, len(e.ValidationErrors))
-		copy(copiedErr.ValidationErrors, e.ValidationErrors)
-	}
-
-	return copiedErr
 }
 
 func (e *ResponseError) WithTypePrefix(prefix string) *ResponseError {

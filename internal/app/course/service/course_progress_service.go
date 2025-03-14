@@ -39,21 +39,21 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseProgressService][UpdateVideoProgress] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
 
 	courseID, err := s.repo.GetContentCourseID(ctx, videoID, "video")
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "course content not found") {
-			return errorpkg.ErrValidation.Build().WithDetail("Video not found")
+			return errorpkg.ErrValidation().WithDetail("Video not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":    err,
 			"video.id": videoID,
 		}, "[CourseProgressService][UpdateVideoProgress] Failed to get course ID for video")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	progress := entity.CourseVideoProgress{
@@ -70,7 +70,7 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 			"student.id": studentID,
 			"video.id":   videoID,
 		}, "[CourseProgressService][UpdateVideoProgress] Failed to update video progress")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	// If the video was newly completed, update the course progress
@@ -82,7 +82,7 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 				"course.id":  courseID,
 				"student.id": studentID,
 			}, "[CourseProgressService][UpdateVideoProgress] Failed to update course progress")
-			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 
 		if courseCompleted {
@@ -91,7 +91,7 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 					"error":      err,
 					"student.id": studentID,
 				}, "[CourseProgressService][UpdateVideoProgress] Failed to add points to student")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+				return errorpkg.ErrInternalServer().WithTraceID(traceID)
 			}
 		}
 	}
@@ -101,7 +101,7 @@ func (s *courseProgressService) UpdateVideoProgress(ctx context.Context, student
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseProgressService][UpdateVideoProgress] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil
@@ -114,21 +114,21 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseProgressService][UpdateMaterialProgress] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
 
 	courseID, err := s.repo.GetContentCourseID(ctx, materialID, "material")
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "course content not found") {
-			return errorpkg.ErrValidation.Build().WithDetail("Material not found")
+			return errorpkg.ErrValidation().WithDetail("Material not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
 			"material.id": materialID,
 		}, "[CourseProgressService][UpdateMaterialProgress] Failed to get course ID for material")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	progress := entity.CourseMaterialProgress{
@@ -143,7 +143,7 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 			"student.id":  studentID,
 			"material.id": materialID,
 		}, "[CourseProgressService][UpdateMaterialProgress] Failed to update material progress")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	// If the material was newly completed, update the course progress
@@ -155,7 +155,7 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 				"course.id":  courseID,
 				"student.id": studentID,
 			}, "[CourseProgressService][UpdateMaterialProgress] Failed to update course progress")
-			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 
 		// If the course was just completed, add points to the student
@@ -165,7 +165,7 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 					"error":      err,
 					"student.id": studentID,
 				}, "[CourseProgressService][UpdateMaterialProgress] Failed to add points to student")
-				return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+				return errorpkg.ErrInternalServer().WithTraceID(traceID)
 			}
 		}
 	}
@@ -175,7 +175,7 @@ func (s *courseProgressService) UpdateMaterialProgress(ctx context.Context, stud
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseProgressService][UpdateMaterialProgress] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil

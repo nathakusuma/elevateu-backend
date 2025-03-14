@@ -47,7 +47,7 @@ func (c *authHandler) requestOTPRegister(ctx *fiber.Ctx) error {
 
 	var req request
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(req); err != nil {
@@ -65,7 +65,7 @@ func (c *authHandler) requestOTPRegister(ctx *fiber.Ctx) error {
 func (c *authHandler) register(ctx *fiber.Ctx) error {
 	var req dto.RegisterRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(req); err != nil {
@@ -83,7 +83,7 @@ func (c *authHandler) register(ctx *fiber.Ctx) error {
 func (c *authHandler) login(ctx *fiber.Ctx) error {
 	var req dto.LoginRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(req); err != nil {
@@ -105,7 +105,7 @@ func (c *authHandler) refreshToken(ctx *fiber.Ctx) error {
 
 	var req request
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(req); err != nil {
@@ -123,7 +123,7 @@ func (c *authHandler) refreshToken(ctx *fiber.Ctx) error {
 func (c *authHandler) logout(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	err := c.svc.Logout(ctx.Context(), userID)
@@ -141,7 +141,7 @@ func (c *authHandler) requestOTPResetPassword(ctx *fiber.Ctx) error {
 
 	var req request
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(req); err != nil {
@@ -159,7 +159,7 @@ func (c *authHandler) requestOTPResetPassword(ctx *fiber.Ctx) error {
 func (c *authHandler) resetPassword(ctx *fiber.Ctx) error {
 	var req dto.ResetPasswordRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(req); err != nil {

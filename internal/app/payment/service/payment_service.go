@@ -58,7 +58,7 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err,
 			"request": req,
 		}, "[PaymentService][createPayment] Failed to begin transaction")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
 
@@ -68,7 +68,7 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err,
 			"request": req,
 		}, "[PaymentService][createPayment] Failed to generate payment ID")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	token, err := s.paymentGateway.CreateTransaction(paymentID.String(), req.Amount)
@@ -77,7 +77,7 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err,
 			"request": req,
 		}, "[PaymentService][createPayment] Failed to create transaction in payment gateway")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	paymentEntity := &entity.Payment{
@@ -96,7 +96,7 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err2,
 			"request": req,
 		}, "[PaymentService][createPayment] Failed to create payment")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	payloadJSON, err := sonic.Marshal(req.Payload)
@@ -105,7 +105,7 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err,
 			"request": req,
 		}, "[PaymentService][createPayment] Failed to marshal payment payload")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err := s.cache.Set(ctx, "payment:"+paymentEntity.ID.String(), string(payloadJSON), 1*time.Hour); err != nil {
@@ -113,7 +113,7 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err,
 			"request": req,
 		}, "[PaymentService][createPayment] Failed to set payment payload in cache")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -121,7 +121,7 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 			"error":   err,
 			"request": req,
 		}, "[PaymentService][createPayment] Failed to commit transaction")
-		return "", errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return "", errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -141,14 +141,14 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			"payment.id":     id,
 			"payment.status": status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
 
 	paymentEntity, err := s.repo.GetPaymentByID(ctx, tx, id)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "payment payload not found") {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -156,7 +156,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			"payment.id":     id,
 			"payment.status": status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to get payment by ID")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	paymentEntity.Status = status
@@ -169,7 +169,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			"payment.id":     id,
 			"payment.status": status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to update payment")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if status == enum.PaymentStatusSuccess {
@@ -180,7 +180,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 				"payment.id":     id,
 				"payment.status": status,
 			}, "[PaymentService][UpdatePaymentStatus] Failed to get payment payload")
-			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 
 		var payload entity.PaymentPayload
@@ -190,7 +190,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 				"payment.id":     id,
 				"payment.status": status,
 			}, "[PaymentService][UpdatePaymentStatus] Failed to unmarshal payment payload")
-			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 
 		// Triggers
@@ -221,7 +221,7 @@ func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, 
 			"payment.id":     id,
 			"payment.status": status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil
@@ -235,12 +235,12 @@ func (s *paymentService) ProcessNotification(ctx context.Context, notificationPa
 
 	orderIDStr, exists := notificationPayload["order_id"].(string)
 	if !exists {
-		return errorpkg.ErrValidation.WithDetail("order_id not found")
+		return errorpkg.ErrValidation().WithDetail("order_id not found")
 	}
 
 	orderID, err := uuid.Parse(orderIDStr)
 	if err != nil {
-		return errorpkg.ErrValidation.WithDetail("order_id not valid")
+		return errorpkg.ErrValidation().WithDetail("order_id not valid")
 	}
 
 	return s.UpdatePaymentStatus(ctx, orderID, status, method)
@@ -355,7 +355,7 @@ func (s *paymentService) triggerSkillBoost(ctx context.Context, tx database.ITra
 			"payment.id":     payment.ID,
 			"payment.status": payment.Status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to add boost subscription")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil
@@ -381,7 +381,7 @@ func (s *paymentService) triggerSkillChallenge(ctx context.Context, tx database.
 			"payment.id":     payment.ID,
 			"payment.status": payment.Status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to add challenge subscription")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil
@@ -412,7 +412,7 @@ func (s *paymentService) triggerSkillGuidance(ctx context.Context, tx database.I
 			"payment.id":     payment.ID,
 			"payment.status": payment.Status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to create mentor transaction history")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err := s.repo.AddMentorBalance(ctx, tx, payload.MentorID, mentorSalary); err != nil {
@@ -420,7 +420,7 @@ func (s *paymentService) triggerSkillGuidance(ctx context.Context, tx database.I
 			"payment.id":     payment.ID,
 			"payment.status": payment.Status,
 		}, "[PaymentService][UpdatePaymentStatus] Failed to add mentor balance")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if _, err := s.mentoringSvc.CreateChat(ctx, payload.MentorID, payload.StudentID, false); err != nil {

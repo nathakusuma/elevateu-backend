@@ -49,7 +49,7 @@ func InitPaymentHandler(
 func (h *paymentHandler) midtransNotification(ctx *fiber.Ctx) error {
 	var notificationPayload map[string]interface{}
 	if err := ctx.BodyParser(&notificationPayload); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.svc.ProcessNotification(ctx.Context(), notificationPayload); err != nil {
@@ -62,7 +62,7 @@ func (h *paymentHandler) midtransNotification(ctx *fiber.Ctx) error {
 func (h *paymentHandler) paySkillBoost(ctx *fiber.Ctx) error {
 	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	paymentToken, err := h.svc.PaySkillBoost(ctx.Context(), studentID)
@@ -78,7 +78,7 @@ func (h *paymentHandler) paySkillBoost(ctx *fiber.Ctx) error {
 func (h *paymentHandler) paySkillChallenge(ctx *fiber.Ctx) error {
 	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	paymentToken, err := h.svc.PaySkillChallenge(ctx.Context(), studentID)
@@ -94,14 +94,14 @@ func (h *paymentHandler) paySkillChallenge(ctx *fiber.Ctx) error {
 func (h *paymentHandler) paySkillGuidance(ctx *fiber.Ctx) error {
 	studentID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	var req struct {
 		MentorID uuid.UUID `json:"mentor_id" validate:"required"`
 	}
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {

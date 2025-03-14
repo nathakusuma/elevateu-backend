@@ -55,17 +55,17 @@ func InitCourseHandler(
 func (c *courseHandler) createCourse(ctx *fiber.Ctx) error {
 	var req dto.CreateCourseRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	var err error
 	req.TeacherAvatar, err = ctx.FormFile("teacher_avatar")
 	if err != nil {
-		return errorpkg.ErrFailParseRequest.Build().WithDetail("Fail to parse teacher avatar")
+		return errorpkg.ErrFailParseRequest().WithDetail("Fail to parse teacher avatar")
 	}
 	req.Thumbnail, err = ctx.FormFile("thumbnail")
 	if err != nil {
-		return errorpkg.ErrFailParseRequest.Build().WithDetail("Fail to parse thumbnail")
+		return errorpkg.ErrFailParseRequest().WithDetail("Fail to parse thumbnail")
 	}
 
 	if err = c.val.ValidateStruct(req); err != nil {
@@ -83,12 +83,12 @@ func (c *courseHandler) createCourse(ctx *fiber.Ctx) error {
 func (c *courseHandler) getCourses(ctx *fiber.Ctx) error {
 	var query dto.GetCoursesQuery
 	if err := ctx.QueryParser(&query); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	var pageReq dto.PaginationRequest
 	if err := ctx.QueryParser(&pageReq); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(query); err != nil {
@@ -112,7 +112,7 @@ func (c *courseHandler) getCourses(ctx *fiber.Ctx) error {
 func (c *courseHandler) getCourseByID(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("invalid course ID")
 	}
 
 	resp, err := c.svc.GetCourseByID(ctx.Context(), id)
@@ -128,12 +128,12 @@ func (c *courseHandler) getCourseByID(ctx *fiber.Ctx) error {
 func (c *courseHandler) updateCourse(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("invalid course ID")
 	}
 
 	var req dto.UpdateCourseRequest
 	if err2 := ctx.BodyParser(&req); err2 != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	// Handle file uploads
@@ -163,7 +163,7 @@ func (c *courseHandler) updateCourse(ctx *fiber.Ctx) error {
 func (c *courseHandler) deleteCourse(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("invalid course ID")
 	}
 
 	if err2 := c.svc.DeleteCourse(ctx.Context(), id); err2 != nil {
@@ -176,7 +176,7 @@ func (c *courseHandler) deleteCourse(ctx *fiber.Ctx) error {
 func (c *courseHandler) GetPreviewVideoUploadURL(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("invalid course ID")
 	}
 
 	url, err := c.svc.GetPreviewVideoUploadURL(ctx.Context(), id)
@@ -192,12 +192,12 @@ func (c *courseHandler) GetPreviewVideoUploadURL(ctx *fiber.Ctx) error {
 func (c *courseHandler) createEnrollment(ctx *fiber.Ctx) error {
 	courseID, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid course ID")
 	}
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	err = c.svc.CreateEnrollment(ctx.Context(), courseID, userID)
@@ -211,12 +211,12 @@ func (c *courseHandler) createEnrollment(ctx *fiber.Ctx) error {
 func (c *courseHandler) getEnrolledCourses(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	var pageReq dto.PaginationRequest
 	if err := ctx.QueryParser(&pageReq); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := c.val.ValidateStruct(pageReq); err != nil {

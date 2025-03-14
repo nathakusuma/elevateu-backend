@@ -42,7 +42,7 @@ func (s *challengeService) CreateChallenge(ctx context.Context,
 			"error":   err,
 			"request": req,
 		}, "[ChallengeService][CreateChallenge] Failed to generate challenge ID")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	challenge := &entity.Challenge{
@@ -58,14 +58,14 @@ func (s *challengeService) CreateChallenge(ctx context.Context,
 	err = s.repo.CreateChallenge(ctx, challenge)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "challenge group not found") {
-			return nil, errorpkg.ErrValidation.Build().WithDetail("Challenge group not found")
+			return nil, errorpkg.ErrValidation().WithDetail("Challenge group not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":   err,
 			"request": req,
 		}, "[ChallengeService][CreateChallenge] Failed to create challenge")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return &dto.ChallengeResponse{ID: challengeID}, nil
@@ -81,7 +81,7 @@ func (s *challengeService) GetChallenges(ctx context.Context, groupID uuid.UUID,
 			"difficulty": difficulty,
 			"pagination": paginationReq,
 		}, "[ChallengeService][GetChallenges] Failed to get challenges")
-		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	resp := make([]*dto.ChallengeResponse, len(challenges))
@@ -97,14 +97,14 @@ func (s *challengeService) GetChallengeDetail(ctx context.Context, id uuid.UUID)
 	challenge, err := s.repo.GetChallengeByID(ctx, id)
 	if err != nil {
 		if err.Error() == "challenge not found" {
-			return nil, errorpkg.ErrNotFound
+			return nil, errorpkg.ErrNotFound()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 			"id":    id,
 		}, "[ChallengeService][GetChallengeDetail] Failed to get challenge detail")
-		return nil, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	resp := &dto.ChallengeResponse{}
@@ -126,9 +126,9 @@ func (s *challengeService) UpdateChallenge(ctx context.Context, id uuid.UUID, re
 	err := s.repo.UpdateChallenge(ctx, id, updates)
 	if err != nil {
 		if err.Error() == "challenge not found" {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		} else if strings.HasPrefix(err.Error(), "challenge group not found") {
-			return errorpkg.ErrValidation.Build().WithDetail("Challenge group not found")
+			return errorpkg.ErrValidation().WithDetail("Challenge group not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -136,7 +136,7 @@ func (s *challengeService) UpdateChallenge(ctx context.Context, id uuid.UUID, re
 			"id":      id,
 			"request": req,
 		}, "[ChallengeService][UpdateChallenge] Failed to update challenge")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil
@@ -146,14 +146,14 @@ func (s *challengeService) DeleteChallenge(ctx context.Context, id uuid.UUID) er
 	err := s.repo.DeleteChallenge(ctx, id)
 	if err != nil {
 		if err.Error() == "challenge not found" {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 			"id":    id,
 		}, "[ChallengeService][DeleteChallenge] Failed to delete challenge")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	return nil

@@ -51,12 +51,12 @@ func (h *challengeSubmissionHandler) createSubmission(ctx *fiber.Ctx) error {
 	var req dto.CreateChallengeSubmissionRequest
 	challengeID, err := uuid.Parse(ctx.Params("challenge_id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid challenge ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid challenge ID")
 	}
 	req.ChallengeID = challengeID
 
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {
@@ -73,7 +73,7 @@ func (h *challengeSubmissionHandler) createSubmission(ctx *fiber.Ctx) error {
 func (h *challengeSubmissionHandler) getSubmissionAsStudent(ctx *fiber.Ctx) error {
 	challengeID, err := uuid.Parse(ctx.Params("challenge_id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid challenge ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid challenge ID")
 	}
 
 	submission, err := h.svc.GetSubmissionAsStudent(ctx.Context(), challengeID)
@@ -89,12 +89,12 @@ func (h *challengeSubmissionHandler) getSubmissionAsStudent(ctx *fiber.Ctx) erro
 func (h *challengeSubmissionHandler) getSubmissionsAsMentor(ctx *fiber.Ctx) error {
 	challengeID, err := uuid.Parse(ctx.Params("challenge_id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid challenge ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid challenge ID")
 	}
 
 	var pageReq dto.PaginationRequest
 	if err := ctx.QueryParser(&pageReq); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(pageReq); err != nil {
@@ -115,12 +115,12 @@ func (h *challengeSubmissionHandler) getSubmissionsAsMentor(ctx *fiber.Ctx) erro
 func (h *challengeSubmissionHandler) createFeedback(ctx *fiber.Ctx) error {
 	submissionID, err := uuid.Parse(ctx.Params("submission_id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid submission ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid submission ID")
 	}
 
 	var req dto.CreateChallengeSubmissionFeedbackRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {

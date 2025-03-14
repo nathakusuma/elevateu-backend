@@ -61,13 +61,13 @@ func (c *userHandler) getUser(param string) fiber.Handler {
 			var ok bool
 			userID, ok = ctx.Locals(ctxkey.UserID).(uuid.UUID)
 			if !ok {
-				return errorpkg.ErrInvalidBearerToken
+				return errorpkg.ErrInvalidBearerToken()
 			}
 		} else {
 			var err error
 			userID, err = uuid.Parse(ctx.Params("id"))
 			if err != nil {
-				return errorpkg.ErrFailParseRequest
+				return errorpkg.ErrFailParseRequest()
 			}
 		}
 
@@ -91,12 +91,12 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 	var req dto.UpdateUserRequest
 
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	// Validate role-specific data
@@ -125,7 +125,7 @@ func (c *userHandler) updateUser(ctx *fiber.Ctx) error {
 func (c *userHandler) deleteUser(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	if err := c.svc.DeleteUser(ctx.Context(), userID); err != nil {
@@ -139,12 +139,12 @@ func (c *userHandler) deleteUser(ctx *fiber.Ctx) error {
 func (c *userHandler) updateUserAvatar(ctx *fiber.Ctx) error {
 	file, err := ctx.FormFile("avatar")
 	if err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	if err2 := c.svc.UpdateUserAvatar(ctx.Context(), userID, file); err2 != nil {
@@ -157,7 +157,7 @@ func (c *userHandler) updateUserAvatar(ctx *fiber.Ctx) error {
 func (c *userHandler) deleteUserAvatar(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	if err := c.svc.DeleteUserAvatar(ctx.Context(), userID); err != nil {

@@ -45,7 +45,7 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 	req dto.CreateCourseFeedbackRequest) error {
 	userID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	tx, err := s.txManager.BeginTx(ctx)
@@ -53,7 +53,7 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseFeedbackService][CreateFeedback] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	defer tx.Rollback()
 
@@ -61,18 +61,18 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 	enrollment, err := s.courseRepo.GetEnrollment(ctx, courseID, userID)
 	if err != nil {
 		if strings.Contains(err.Error(), "enrollment not found") {
-			return errorpkg.ErrCannotFeedbackUnenrolledCourse
+			return errorpkg.ErrCannotFeedbackUnenrolledCourse()
 		}
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":      err,
 			"course.id":  courseID,
 			"student.id": userID,
 		}, "[CourseFeedbackService][CreateFeedback] Failed to check if student completed course")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if !enrollment.IsCompleted {
-		return errorpkg.ErrCannotFeedbackUncompletedCourse
+		return errorpkg.ErrCannotFeedbackUncompletedCourse()
 	}
 
 	feedbackID, err := s.uuid.NewV7()
@@ -80,7 +80,7 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseFeedbackService][CreateFeedback] Failed to generate UUID")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	feedback := &entity.CourseFeedback{
@@ -94,11 +94,11 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 	err = s.repo.CreateFeedback(ctx, tx, feedback)
 	if err != nil {
 		if strings.Contains(err.Error(), "student has already submitted feedback") {
-			return errorpkg.ErrStudentAlreadySubmittedFeedback
+			return errorpkg.ErrStudentAlreadySubmittedFeedback()
 		}
 
 		if strings.Contains(err.Error(), "course not found") {
-			return errorpkg.ErrValidation.Build().WithDetail("Course not found")
+			return errorpkg.ErrValidation().WithDetail("Course not found")
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -106,7 +106,7 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 			"feedback":  feedback,
 			"course.id": courseID,
 		}, "[CourseFeedbackService][CreateFeedback] Failed to create feedback")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	course, err := s.courseRepo.GetCourseByID(ctx, courseID)
@@ -115,7 +115,7 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 			"error":     err,
 			"course.id": courseID,
 		}, "[CourseFeedbackService][CreateFeedback] Failed to get course")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	ratingCount := course.RatingCount
 	totalRating := course.TotalRating
@@ -131,14 +131,14 @@ func (s *courseFeedbackService) CreateFeedback(ctx context.Context, courseID uui
 			"error":     err,
 			"course.id": courseID,
 		}, "[CourseFeedbackService][CreateFeedback] Failed to update course rating")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err = tx.Commit(); err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseFeedbackService][CreateFeedback] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -158,7 +158,7 @@ func (s *courseFeedbackService) GetFeedbacksByCourseID(ctx context.Context, cour
 			"course.id":  courseID,
 			"pagination": pageReq,
 		}, "[CourseFeedbackService][GetFeedbacksByCourseID] Failed to get feedbacks")
-		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	responses := make([]*dto.CourseFeedbackResponse, len(feedbacks))
@@ -170,7 +170,7 @@ func (s *courseFeedbackService) GetFeedbacksByCourseID(ctx context.Context, cour
 				"error":    err,
 				"feedback": feedback,
 			}, "[CourseFeedbackService][GetFeedbacksByCourseID] Failed to populate response from entity")
-			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 	}
 
@@ -181,24 +181,24 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 	req dto.UpdateCourseFeedbackRequest) error {
 	userID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	feedback, err := s.repo.GetFeedbackByID(ctx, feedbackID)
 	if err != nil {
 		if strings.Contains(err.Error(), "feedback not found") {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
 			"feedback.id": feedbackID,
 		}, "[CourseFeedbackService][UpdateFeedback] Failed to get feedback")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if feedback.StudentID != userID {
-		return errorpkg.ErrForbiddenUser.WithDetail("You can only update your own feedback")
+		return errorpkg.ErrForbiddenUser().WithDetail("You can only update your own feedback")
 	}
 
 	tx, err := s.txManager.BeginTx(ctx)
@@ -206,7 +206,7 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseFeedbackService][UpdateFeedback] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	defer tx.Rollback()
@@ -228,7 +228,7 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 	err = s.repo.UpdateFeedback(ctx, tx, feedbackID, updates)
 	if err != nil {
 		if strings.Contains(err.Error(), "feedback not found") {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
@@ -236,7 +236,7 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 			"feedback.id": feedbackID,
 			"updates":     updates,
 		}, "[CourseFeedbackService][UpdateFeedback] Failed to update feedback")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if ratingDiff != 0 {
@@ -246,7 +246,7 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 				"error":     err,
 				"course.id": feedback.CourseID,
 			}, "[CourseFeedbackService][UpdateFeedback] Failed to get course")
-			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 		ratingCount := course.RatingCount
 		totalRating := course.TotalRating
@@ -260,7 +260,7 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 				"error":     err,
 				"course.id": feedback.CourseID,
 			}, "[CourseFeedbackService][UpdateFeedback] Failed to update course rating")
-			return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+			return errorpkg.ErrInternalServer().WithTraceID(traceID)
 		}
 	}
 
@@ -268,7 +268,7 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseFeedbackService][UpdateFeedback] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{
@@ -284,24 +284,24 @@ func (s *courseFeedbackService) UpdateFeedback(ctx context.Context, feedbackID u
 func (s *courseFeedbackService) DeleteFeedback(ctx context.Context, feedbackID uuid.UUID) error {
 	userID, ok := ctx.Value(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	feedback, err := s.repo.GetFeedbackByID(ctx, feedbackID)
 	if err != nil {
 		if strings.Contains(err.Error(), "feedback not found") {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
 			"feedback.id": feedbackID,
 		}, "[CourseFeedbackService][DeleteFeedback] Failed to get feedback")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if feedback.StudentID != userID {
-		return errorpkg.ErrForbiddenUser.WithDetail("You can only delete your own feedback")
+		return errorpkg.ErrForbiddenUser().WithDetail("You can only delete your own feedback")
 	}
 
 	tx, err := s.txManager.BeginTx(ctx)
@@ -309,7 +309,7 @@ func (s *courseFeedbackService) DeleteFeedback(ctx context.Context, feedbackID u
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseFeedbackService][DeleteFeedback] Failed to begin transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	defer tx.Rollback()
@@ -317,14 +317,14 @@ func (s *courseFeedbackService) DeleteFeedback(ctx context.Context, feedbackID u
 	err = s.repo.DeleteFeedback(ctx, tx, feedbackID)
 	if err != nil {
 		if strings.Contains(err.Error(), "feedback not found") {
-			return errorpkg.ErrNotFound
+			return errorpkg.ErrNotFound()
 		}
 
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error":       err,
 			"feedback.id": feedbackID,
 		}, "[CourseFeedbackService][DeleteFeedback] Failed to delete feedback")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	course, err := s.courseRepo.GetCourseByID(ctx, feedback.CourseID)
@@ -333,7 +333,7 @@ func (s *courseFeedbackService) DeleteFeedback(ctx context.Context, feedbackID u
 			"error":     err,
 			"course.id": feedback.CourseID,
 		}, "[CourseFeedbackService][DeleteFeedback] Failed to get course")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 	ratingCount := course.RatingCount
 	totalRating := course.TotalRating
@@ -352,14 +352,14 @@ func (s *courseFeedbackService) DeleteFeedback(ctx context.Context, feedbackID u
 			"error":     err,
 			"course.id": feedback.CourseID,
 		}, "[CourseFeedbackService][DeleteFeedback] Failed to update course rating")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	if err = tx.Commit(); err != nil {
 		traceID := log.ErrorWithTraceID(map[string]interface{}{
 			"error": err,
 		}, "[CourseFeedbackService][DeleteFeedback] Failed to commit transaction")
-		return errorpkg.ErrInternalServer.Build().WithTraceID(traceID)
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
 	}
 
 	log.Info(map[string]interface{}{

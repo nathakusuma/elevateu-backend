@@ -12,7 +12,7 @@ func RequireSubscription(subscriptionType enum.PaymentType) fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
 		userRole, ok := ctx.Locals(ctxkey.UserRole).(enum.UserRole)
 		if !ok {
-			return errorpkg.ErrInvalidBearerToken
+			return errorpkg.ErrInvalidBearerToken()
 		}
 
 		switch subscriptionType {
@@ -22,7 +22,7 @@ func RequireSubscription(subscriptionType enum.PaymentType) fiber.Handler {
 			}
 			isSubscribedBoost, ok := ctx.Locals(ctxkey.IsSubscribedBoost).(bool)
 			if !ok || !isSubscribedBoost {
-				return errorpkg.ErrNotSubscribed.Build().
+				return errorpkg.ErrNotSubscribed().
 					WithDetail("You need to subscribe to Skill Boost to access this.")
 			}
 		case enum.PaymentTypeChallenge:
@@ -31,7 +31,7 @@ func RequireSubscription(subscriptionType enum.PaymentType) fiber.Handler {
 			}
 			isSubscribedChallenge, ok := ctx.Locals(ctxkey.IsSubscribedChallenge).(bool)
 			if !ok || !isSubscribedChallenge {
-				return errorpkg.ErrNotSubscribed.Build().
+				return errorpkg.ErrNotSubscribed().
 					WithDetail("You need to subscribe to Skill Challenge to access this.")
 			}
 		}

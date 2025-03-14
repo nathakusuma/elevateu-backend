@@ -55,7 +55,7 @@ func InitCourseContentHandler(
 func (h *courseContentHandler) getCourseContents(ctx *fiber.Ctx) error {
 	courseID, err := uuid.Parse(ctx.Params("courseId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("invalid course ID")
 	}
 
 	contents, err := h.svc.GetCourseContents(ctx.Context(), courseID)
@@ -71,12 +71,12 @@ func (h *courseContentHandler) getCourseContents(ctx *fiber.Ctx) error {
 func (h *courseContentHandler) createVideo(ctx *fiber.Ctx) error {
 	courseID, err := uuid.Parse(ctx.Params("courseId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("invalid course ID")
 	}
 
 	var req dto.CreateCourseVideoRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {
@@ -94,12 +94,12 @@ func (h *courseContentHandler) createVideo(ctx *fiber.Ctx) error {
 func (h *courseContentHandler) updateVideo(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid video ID")
+		return errorpkg.ErrValidation().WithDetail("invalid video ID")
 	}
 
 	var req dto.UpdateCourseVideoRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {
@@ -116,7 +116,7 @@ func (h *courseContentHandler) updateVideo(ctx *fiber.Ctx) error {
 func (h *courseContentHandler) deleteVideo(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid video ID")
+		return errorpkg.ErrValidation().WithDetail("invalid video ID")
 	}
 
 	if err := h.svc.DeleteVideo(ctx.Context(), id); err != nil {
@@ -129,7 +129,7 @@ func (h *courseContentHandler) deleteVideo(ctx *fiber.Ctx) error {
 func (h *courseContentHandler) getVideoUploadURLs(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid video ID")
+		return errorpkg.ErrValidation().WithDetail("invalid video ID")
 	}
 
 	videoURL, thumbnailURL, err := h.svc.GetVideoUploadURLs(ctx.Context(), id)
@@ -146,12 +146,12 @@ func (h *courseContentHandler) getVideoUploadURLs(ctx *fiber.Ctx) error {
 func (h *courseContentHandler) createMaterial(ctx *fiber.Ctx) error {
 	courseID, err := uuid.Parse(ctx.Params("courseId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("invalid course ID")
 	}
 
 	var req dto.CreateCourseMaterialRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {
@@ -169,12 +169,12 @@ func (h *courseContentHandler) createMaterial(ctx *fiber.Ctx) error {
 func (h *courseContentHandler) updateMaterial(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid material ID")
+		return errorpkg.ErrValidation().WithDetail("invalid material ID")
 	}
 
 	var req dto.UpdateCourseMaterialRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {
@@ -191,7 +191,7 @@ func (h *courseContentHandler) updateMaterial(ctx *fiber.Ctx) error {
 func (h *courseContentHandler) deleteMaterial(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid material ID")
+		return errorpkg.ErrValidation().WithDetail("invalid material ID")
 	}
 
 	if err := h.svc.DeleteCourseMaterial(ctx.Context(), id); err != nil {
@@ -204,7 +204,7 @@ func (h *courseContentHandler) deleteMaterial(ctx *fiber.Ctx) error {
 func (h *courseContentHandler) getMaterialUploadURL(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("invalid material ID")
+		return errorpkg.ErrValidation().WithDetail("invalid material ID")
 	}
 
 	url, err := h.svc.GetMaterialUploadURL(ctx.Context(), id)

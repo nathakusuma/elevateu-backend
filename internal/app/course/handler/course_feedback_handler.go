@@ -46,12 +46,12 @@ func InitCourseFeedbackHandler(
 func (h *courseFeedbackHandler) createFeedback(ctx *fiber.Ctx) error {
 	courseID, err := uuid.Parse(ctx.Params("courseId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid course ID")
 	}
 
 	var req dto.CreateCourseFeedbackRequest
 	if err = ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err = h.val.ValidateStruct(req); err != nil {
@@ -68,13 +68,13 @@ func (h *courseFeedbackHandler) createFeedback(ctx *fiber.Ctx) error {
 func (h *courseFeedbackHandler) getFeedbacks(c *fiber.Ctx) error {
 	courseID, err := uuid.Parse(c.Params("courseId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid course ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid course ID")
 	}
 
 	// Parse pagination request
 	var pageReq dto.PaginationRequest
 	if err = c.QueryParser(&pageReq); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err = h.val.ValidateStruct(pageReq); err != nil {
@@ -95,12 +95,12 @@ func (h *courseFeedbackHandler) getFeedbacks(c *fiber.Ctx) error {
 func (h *courseFeedbackHandler) updateFeedback(c *fiber.Ctx) error {
 	feedbackID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid feedback ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid feedback ID")
 	}
 
 	var req dto.UpdateCourseFeedbackRequest
 	if err = c.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err = h.val.ValidateStruct(req); err != nil {
@@ -117,7 +117,7 @@ func (h *courseFeedbackHandler) updateFeedback(c *fiber.Ctx) error {
 func (h *courseFeedbackHandler) deleteFeedback(c *fiber.Ctx) error {
 	feedbackID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid feedback ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid feedback ID")
 	}
 
 	if err = h.svc.DeleteFeedback(c.Context(), feedbackID); err != nil {

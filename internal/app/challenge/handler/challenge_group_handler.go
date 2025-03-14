@@ -47,13 +47,13 @@ func InitChallengeGroupHandler(
 func (h *challengeGroupHandler) createGroup(ctx *fiber.Ctx) error {
 	var req dto.CreateChallengeGroupRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	var err error
 	req.Thumbnail, err = ctx.FormFile("thumbnail")
 	if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
-		return errorpkg.ErrFailParseRequest.Build().WithDetail("Failed to parse thumbnail")
+		return errorpkg.ErrFailParseRequest().WithDetail("Failed to parse thumbnail")
 	}
 
 	if err = h.val.ValidateStruct(req); err != nil {
@@ -73,12 +73,12 @@ func (h *challengeGroupHandler) createGroup(ctx *fiber.Ctx) error {
 func (h *challengeGroupHandler) getGroups(ctx *fiber.Ctx) error {
 	var query dto.GetChallengeGroupQuery
 	if err := ctx.QueryParser(&query); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	var pageReq dto.PaginationRequest
 	if err := ctx.QueryParser(&pageReq); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(query); err != nil {
@@ -102,12 +102,12 @@ func (h *challengeGroupHandler) getGroups(ctx *fiber.Ctx) error {
 func (h *challengeGroupHandler) updateGroup(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid challenge group ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid challenge group ID")
 	}
 
 	var req dto.UpdateChallengeGroupRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	thumbnail, err := ctx.FormFile("thumbnail")
@@ -129,7 +129,7 @@ func (h *challengeGroupHandler) updateGroup(ctx *fiber.Ctx) error {
 func (h *challengeGroupHandler) deleteGroup(ctx *fiber.Ctx) error {
 	id, err := uuid.Parse(ctx.Params("id"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid challenge group ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid challenge group ID")
 	}
 
 	if err := h.svc.DeleteGroup(ctx.Context(), id); err != nil {

@@ -47,32 +47,32 @@ func (p *midtransPayment) ProcessNotification(
 	orderId, exists := notificationPayload["order_id"].(string)
 	if !exists {
 		// do something when key `order_id` not found
-		return "", "", errorpkg.ErrValidation.WithDetail("order_id not found")
+		return "", "", errorpkg.ErrValidation().WithDetail("order_id not found")
 	}
 
 	statusCode, exists := notificationPayload["status_code"].(string)
 	if !exists {
-		return "", "", errorpkg.ErrValidation.WithDetail("status_code not found")
+		return "", "", errorpkg.ErrValidation().WithDetail("status_code not found")
 	}
 
 	grossAmount, exists := notificationPayload["gross_amount"].(string)
 	if !exists {
-		return "", "", errorpkg.ErrValidation.WithDetail("gross_amount not found")
+		return "", "", errorpkg.ErrValidation().WithDetail("gross_amount not found")
 	}
 
 	signatureKey, exists := notificationPayload["signature_key"].(string)
 	if !exists {
-		return "", "", errorpkg.ErrValidation.WithDetail("signature_key not found")
+		return "", "", errorpkg.ErrValidation().WithDetail("signature_key not found")
 	}
 
 	if ok := p.verifySignature(orderId, statusCode, grossAmount, signatureKey); !ok {
-		return "", "", errorpkg.ErrValidation.WithDetail("signature_key not valid")
+		return "", "", errorpkg.ErrValidation().WithDetail("signature_key not valid")
 	}
 
 	// 4. Check transaction to Midtrans with param orderId
 	transactionStatusResp, e := coreapi.CheckTransaction(orderId)
 	if e != nil {
-		return "", "", errorpkg.ErrOKIgnore
+		return "", "", errorpkg.ErrOKIgnore()
 	} else {
 		if transactionStatusResp != nil {
 			// 5. Do set transaction status based on response from check transaction status
@@ -101,7 +101,7 @@ func (p *midtransPayment) ProcessNotification(
 		}
 	}
 
-	return "", "", errorpkg.ErrInternalServer
+	return "", "", errorpkg.ErrInternalServer()
 }
 
 func (p *midtransPayment) verifySignature(orderID, statusCode, grossAmount, providedSignature string) bool {

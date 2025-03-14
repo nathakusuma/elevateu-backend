@@ -59,14 +59,14 @@ func InitMentoringHandler(
 func (h *mentoringHandler) createTrialChat(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	var req struct {
 		MentorID uuid.UUID `json:"mentor_id" validate:"required"`
 	}
 	if err := ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err := h.val.ValidateStruct(req); err != nil {
@@ -84,19 +84,19 @@ func (h *mentoringHandler) createTrialChat(ctx *fiber.Ctx) error {
 func (h *mentoringHandler) sendMessage(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	chatID, err := uuid.Parse(ctx.Params("chatId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid chat ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid chat ID")
 	}
 
 	var req struct {
 		Message string `json:"message" validate:"required,min=1,max=2000"`
 	}
 	if err = ctx.BodyParser(&req); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err = h.val.ValidateStruct(req); err != nil {
@@ -113,17 +113,17 @@ func (h *mentoringHandler) sendMessage(ctx *fiber.Ctx) error {
 func (h *mentoringHandler) getMessages(ctx *fiber.Ctx) error {
 	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
 	if !ok {
-		return errorpkg.ErrInvalidBearerToken
+		return errorpkg.ErrInvalidBearerToken()
 	}
 
 	chatID, err := uuid.Parse(ctx.Params("chatId"))
 	if err != nil {
-		return errorpkg.ErrValidation.Build().WithDetail("Invalid chat ID")
+		return errorpkg.ErrValidation().WithDetail("Invalid chat ID")
 	}
 
 	var pageReq dto.PaginationRequest
 	if err = ctx.QueryParser(&pageReq); err != nil {
-		return errorpkg.ErrFailParseRequest
+		return errorpkg.ErrFailParseRequest()
 	}
 
 	if err = h.val.ValidateStruct(pageReq); err != nil {
@@ -161,7 +161,7 @@ func (h *mentoringHandler) handleWebSocket(conn *websocket.Conn) {
 	chatIDStr := conn.Params("chatId")
 	chatID, err := uuid.Parse(chatIDStr)
 	if err != nil {
-		conn.WriteJSON(errorpkg.ErrValidation.Build().WithDetail("Invalid chat ID"))
+		conn.WriteJSON(errorpkg.ErrValidation().WithDetail("Invalid chat ID"))
 		conn.Close()
 		return
 	}
