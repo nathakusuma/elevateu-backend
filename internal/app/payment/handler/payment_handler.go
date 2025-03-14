@@ -3,20 +3,19 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/nathakusuma/elevateu-backend/pkg/log"
 
 	"github.com/nathakusuma/elevateu-backend/domain/contract"
 	"github.com/nathakusuma/elevateu-backend/domain/ctxkey"
 	"github.com/nathakusuma/elevateu-backend/domain/enum"
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"github.com/nathakusuma/elevateu-backend/pkg/validator"
 )
 
 type paymentHandler struct {
-	svc  contract.IPaymentService
-	midw *middleware.Middleware
-	val  validator.IValidator
+	svc contract.IPaymentService
+	val validator.IValidator
 }
 
 func InitPaymentHandler(
@@ -45,6 +44,15 @@ func InitPaymentHandler(
 		midw.RequireAuthenticated,
 		midw.RequireOneOfRoles(enum.UserRoleStudent),
 		handler.paySkillGuidance)
+
+	paymentGroup.Get("/my",
+		midw.RequireAuthenticated,
+		midw.RequireOneOfRoles(enum.UserRoleStudent),
+		handler.getPayments)
+	paymentGroup.Get("/mentor/transaction-histories",
+		midw.RequireAuthenticated,
+		midw.RequireOneOfRoles(enum.UserRoleMentor),
+		handler.getMentorTransactionHistories)
 }
 
 func (h *paymentHandler) midtransNotification(ctx *fiber.Ctx) error {
@@ -119,5 +127,39 @@ func (h *paymentHandler) paySkillGuidance(ctx *fiber.Ctx) error {
 
 	return ctx.JSON(map[string]any{
 		"payment_token": paymentToken,
+	})
+}
+
+func (h *paymentHandler) getPayments(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
+
+	payments, err := h.svc.GetPaymentsByStudent(ctx.Context(), userID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(map[string]any{
+		"payments": payments,
+	})
+}
+
+func (h *paymentHandler) getMentorTransactionHistories(ctx *fiber.Ctx) error {
+	mentorID, ok := ctx.Locals(ctxkey.UserID).(uuid.UUID)
+	if !ok {
+		traceID := log.ErrorWithTraceID(ctx.Context(), nil, "Failed to get user ID from context")
+		return errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
+
+	transactions, err := h.svc.GetTransactionHistoriesByMentor(ctx.Context(), mentorID)
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(map[string]any{
+		"mentor_transaction_histories": transactions,
 	})
 }

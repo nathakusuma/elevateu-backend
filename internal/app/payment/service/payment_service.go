@@ -133,6 +133,41 @@ func (s *paymentService) createPayment(ctx context.Context, req dto.CreatePaymen
 	return token, nil
 }
 
+func (s *paymentService) GetPaymentsByStudent(ctx context.Context,
+	studentID uuid.UUID) ([]*dto.PaymentResponse, error) {
+	payments, err := s.repo.GetPaymentsByStudent(ctx, studentID)
+	if err != nil {
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":      err,
+			"student.id": studentID,
+		}, "Failed to get payments by student")
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
+
+	var resp []*dto.PaymentResponse
+	for _, p := range payments {
+		paymentResp := &dto.PaymentResponse{}
+		paymentResp.PopulateFromEntity(p)
+		resp = append(resp, paymentResp)
+	}
+
+	return resp, nil
+}
+
+func (s *paymentService) GetTransactionHistoriesByMentor(ctx context.Context,
+	mentorID uuid.UUID) ([]*entity.MentorTransactionHistory, error) {
+	mentorTransactionHistories, err := s.repo.GetTransactionHistoriesByMentor(ctx, mentorID)
+	if err != nil {
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":     err,
+			"mentor.id": mentorID,
+		}, "Failed to get transaction histories by mentor")
+		return nil, errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
+
+	return mentorTransactionHistories, nil
+}
+
 func (s *paymentService) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status enum.PaymentStatus,
 	method string) error {
 	tx, err := s.txManager.BeginTx(ctx)

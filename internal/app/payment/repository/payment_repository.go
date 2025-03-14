@@ -108,6 +108,52 @@ func (r *paymentRepository) GetPaymentByID(ctx context.Context, txWrapper databa
 	return &payment, nil
 }
 
+func (r *paymentRepository) GetPaymentsByStudent(ctx context.Context, studentID uuid.UUID) ([]*entity.Payment, error) {
+	var payments []*entity.Payment
+	if err := sqlx.SelectContext(ctx, r.db, &payments, `
+		SELECT
+			id,
+			user_id,
+			token,
+			amount,
+			title,
+			detail,
+			method,
+			status,
+			expired_at,
+			created_at,
+			updated_at
+		FROM payments
+		WHERE user_id = $1
+		ORDER BY id DESC
+	`, studentID); err != nil {
+		return nil, fmt.Errorf("failed to get payments by student: %w", err)
+	}
+
+	return payments, nil
+}
+
+func (r *paymentRepository) GetTransactionHistoriesByMentor(ctx context.Context, mentorID uuid.UUID) (
+	[]*entity.MentorTransactionHistory, error) {
+	var mentorTransactionHistories []*entity.MentorTransactionHistory
+	if err := sqlx.SelectContext(ctx, r.db, &mentorTransactionHistories, `
+		SELECT
+			id,
+			mentor_id,
+			title,
+			detail,
+			amount,
+			created_at
+		FROM mentor_transaction_histories
+		WHERE mentor_id = $1
+		ORDER BY id DESC
+	`, mentorID); err != nil {
+		return nil, fmt.Errorf("failed to get transaction histories by mentor: %w", err)
+	}
+
+	return mentorTransactionHistories, nil
+}
+
 func (r *paymentRepository) UpdatePayment(ctx context.Context, txWrapper database.ITransaction,
 	payment *entity.Payment) error {
 	tx := txWrapper.GetTx()

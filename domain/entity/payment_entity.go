@@ -23,12 +23,12 @@ type Payment struct {
 }
 
 type MentorTransactionHistory struct {
-	ID        uuid.UUID `db:"id"`
-	MentorID  uuid.UUID `db:"mentor_id"`
-	Title     string    `db:"title"`
-	Detail    *string   `db:"detail"`
-	Amount    int       `db:"amount"`
-	CreatedAt time.Time `db:"created_at"`
+	ID        uuid.UUID `db:"id" json:"id"`
+	MentorID  uuid.UUID `db:"mentor_id" json:"mentor_id"`
+	Title     string    `db:"title" json:"title"`
+	Detail    *string   `db:"detail" json:"detail"`
+	Amount    int       `db:"amount" json:"amount"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
 
 type PaymentPayload struct {
