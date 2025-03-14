@@ -373,3 +373,28 @@ func (s *userService) GetLeaderboard(ctx context.Context) ([]*dto.UserResponse, 
 
 	return leaderboard, nil
 }
+
+func (s *userService) GetMentors(ctx context.Context, pageReq dto.PaginationRequest) ([]*dto.UserResponse, dto.PaginationResponse, error) {
+	mentors, pageResp, err := s.repo.GetMentors(ctx, pageReq)
+	if err != nil {
+		traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+			"error":      err,
+			"pagination": pageReq,
+		}, "Failed to get mentors")
+		return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
+	}
+
+	responses := make([]*dto.UserResponse, len(mentors))
+	for i, mentor := range mentors {
+		responses[i] = &dto.UserResponse{}
+		if err = responses[i].PopulateMinimalFromEntity(mentor, s.fileUtil.GetSignedURL); err != nil {
+			traceID := log.ErrorWithTraceID(ctx, map[string]interface{}{
+				"error": err,
+				"user":  mentor,
+			}, "Failed to populate mentor response")
+			return nil, dto.PaginationResponse{}, errorpkg.ErrInternalServer().WithTraceID(traceID)
+		}
+	}
+
+	return responses, pageResp, nil
+}

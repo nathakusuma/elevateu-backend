@@ -35,6 +35,10 @@ func InitUserHandler(
 		midw.RequireAuthenticated,
 		handler.getLeaderboard,
 	)
+	userGroup.Get("/mentors",
+		midw.RequireAuthenticated,
+		handler.getMentors,
+	)
 	userGroup.Get("/me",
 		midw.RequireAuthenticated,
 		handler.getUser("me"),
@@ -185,5 +189,26 @@ func (c *userHandler) getLeaderboard(ctx *fiber.Ctx) error {
 
 	return ctx.Status(fiber.StatusOK).JSON(map[string]interface{}{
 		"users": resp,
+	})
+}
+
+func (c *userHandler) getMentors(ctx *fiber.Ctx) error {
+	var pageReq dto.PaginationRequest
+	if err := ctx.QueryParser(&pageReq); err != nil {
+		return errorpkg.ErrFailParseRequest()
+	}
+
+	if err := c.val.ValidateStruct(pageReq); err != nil {
+		return err
+	}
+
+	resp, pagination, err := c.svc.GetMentors(ctx.Context(), pageReq)
+	if err != nil {
+		return err
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(map[string]interface{}{
+		"mentors":    resp,
+		"pagination": pagination,
 	})
 }

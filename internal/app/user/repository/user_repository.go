@@ -450,3 +450,98 @@ func (r *userRepository) GetTopPoints(ctx context.Context, limit int) ([]*entity
 
 	return users, nil
 }
+
+func (r *userRepository) GetMentors(ctx context.Context,
+	pageReq dto.PaginationRequest) ([]*entity.User, dto.PaginationResponse, error) {
+	baseQuery := `
+		SELECT
+			u.id,
+			u.name,
+			u.email,
+			u.password_hash,
+			u.role,
+			u.has_avatar,
+			u.created_at,
+			u.updated_at,
+			m.address AS "mentor.address",
+			m.specialization AS "mentor.specialization",
+			m.current_job AS "mentor.current_job",
+			m.company AS "mentor.company",
+			m.bio AS "mentor.bio",
+			m.gender AS "mentor.gender",
+			m.rating AS "mentor.rating",
+			m.rating_count AS "mentor.rating_count",
+			m.rating_total AS "mentor.rating_total",
+			m.price AS "mentor.price",
+			m.balance AS "mentor.balance"
+		FROM users u
+		JOIN mentors m ON u.id = m.user_id
+		WHERE u.role = 'mentor'
+	`
+
+	var sqlQuery string
+	var args []interface{}
+
+	if pageReq.Cursor != uuid.Nil {
+		var cursorRatingTotal float64
+		err := r.db.GetContext(ctx, &cursorRatingTotal,
+			`SELECT m.rating_total FROM mentors m JOIN users u ON m.user_id = u.id WHERE u.id = $1`,
+			pageReq.Cursor)
+		if err != nil {
+			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to get cursor rating total: %w", err)
+		}
+
+		var operator string
+		var orderDirection string
+
+		if pageReq.Direction == "next" {
+			operator = "<"
+			orderDirection = "DESC"
+		} else {
+			operator = ">"
+			orderDirection = "ASC"
+		}
+
+		sqlQuery = baseQuery + fmt.Sprintf(
+			` AND (m.rating_total %s $1 OR (m.rating_total = $1 AND u.id %s $2))
+			 ORDER BY m.rating_total %s, u.id %s LIMIT $3`,
+			operator, operator, orderDirection, orderDirection)
+		args = append(args, cursorRatingTotal, pageReq.Cursor, pageReq.Limit+1)
+	} else {
+		sqlQuery = baseQuery + " ORDER BY m.rating_total DESC, u.id DESC LIMIT $1"
+		args = append(args, pageReq.Limit+1)
+	}
+
+	rows, err := r.db.QueryxContext(ctx, sqlQuery, args...)
+	if err != nil {
+		return nil, dto.PaginationResponse{}, fmt.Errorf("failed to query mentors: %w", err)
+	}
+	defer rows.Close()
+
+	var mentors []*entity.User
+	for rows.Next() {
+		var user entity.User
+		user.Mentor = &entity.Mentor{}
+
+		if err = rows.StructScan(&user); err != nil {
+			return nil, dto.PaginationResponse{}, fmt.Errorf("failed to scan mentor: %w", err)
+		}
+
+		mentors = append(mentors, &user)
+	}
+
+	hasMore := false
+	if len(mentors) > pageReq.Limit {
+		hasMore = true
+		mentors = mentors[:pageReq.Limit]
+	}
+
+	if pageReq.Direction == "prev" && pageReq.Cursor != uuid.Nil {
+		// Reverse the results for "prev" direction
+		for i, j := 0, len(mentors)-1; i < j; i, j = i+1, j-1 {
+			mentors[i], mentors[j] = mentors[j], mentors[i]
+		}
+	}
+
+	return mentors, dto.PaginationResponse{HasMore: hasMore}, nil
+}
