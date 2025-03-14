@@ -208,7 +208,7 @@ func (c *userHandler) getMentors(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(map[string]interface{}{
-		"mentors":    resp,
+		"users":      resp,
 		"pagination": pagination,
 	})
 }
