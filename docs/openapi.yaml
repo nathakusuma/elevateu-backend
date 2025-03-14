@@ -1290,23 +1290,27 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: page
+        - name: cursor
           in: query
-          required: false
           schema:
-            type: integer
-            minimum: 1
-            default: 1
-          example: 1
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
         - name: limit
           in: query
-          required: false
+          required: true
           schema:
             type: integer
             minimum: 1
-            maximum: 100
+            maximum: 10
             default: 10
-          example: 10
+          description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
       responses:
         '200':
           description: Success
@@ -1631,21 +1635,27 @@ paths:
           schema:
             type: string
           description: Filter courses by title (partial match)
-        - name: page
+        - name: cursor
           in: query
           schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
         - name: limit
           in: query
+          required: true
           schema:
             type: integer
             minimum: 1
-            maximum: 100
+            maximum: 10
             default: 10
           description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
       responses:
         '200':
           description: Success
@@ -1682,21 +1692,27 @@ paths:
       security:
         - bearerAuth: [ ]
       parameters:
-        - name: page
+        - name: cursor
           in: query
           schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
         - name: limit
           in: query
+          required: true
           schema:
             type: integer
             minimum: 1
-            maximum: 100
+            maximum: 10
             default: 10
           description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
       responses:
         '200':
           description: Success
@@ -2608,21 +2624,27 @@ paths:
             type: string
             format: uuid
           example: "01949e48-9f6b-796b-9611-3c9025493233"
-        - name: page
+        - name: cursor
           in: query
           schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
         - name: limit
           in: query
+          required: true
           schema:
             type: integer
             minimum: 1
-            maximum: 100
+            maximum: 10
             default: 10
           description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
       responses:
         '200':
           description: Success
@@ -2821,21 +2843,27 @@ paths:
           schema:
             type: string
           description: Filter by title (partial match)
-        - name: page
+        - name: cursor
           in: query
           schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
         - name: limit
           in: query
+          required: true
           schema:
             type: integer
             minimum: 1
-            maximum: 100
+            maximum: 10
             default: 10
           description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
       responses:
         '200':
           description: Success
@@ -3049,21 +3077,27 @@ paths:
           required: true
           schema:
             $ref: '#/components/schemas/ChallengeDifficulty'
-        - name: page
+        - name: cursor
           in: query
           schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
         - name: limit
           in: query
+          required: true
           schema:
             type: integer
             minimum: 1
-            maximum: 100
+            maximum: 10
             default: 10
           description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
       responses:
         '200':
           description: Success
@@ -3330,21 +3364,27 @@ paths:
             type: string
             format: uuid
           example: "01949e48-9f6b-796b-9611-3c9025493233"
-        - name: page
+        - name: cursor
           in: query
           schema:
-            type: integer
-            minimum: 1
-            default: 1
-          description: Page number for pagination
+            type: string
+            format: uuid
+          description: Cursor for pagination (UUID of last item in previous page)
         - name: limit
           in: query
+          required: true
           schema:
             type: integer
             minimum: 1
-            maximum: 100
+            maximum: 10
             default: 10
           description: Number of items per page
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [ next, prev ]
+          description: Direction for pagination (required when cursor is provided)
       responses:
         '200':
           description: Success
