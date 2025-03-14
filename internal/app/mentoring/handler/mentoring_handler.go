@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"github.com/nathakusuma/elevateu-backend/pkg/log"
+	"time"
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
@@ -15,6 +15,7 @@ import (
 	"github.com/nathakusuma/elevateu-backend/domain/errorpkg"
 	"github.com/nathakusuma/elevateu-backend/internal/middleware"
 	"github.com/nathakusuma/elevateu-backend/pkg/jwt"
+	"github.com/nathakusuma/elevateu-backend/pkg/log"
 	"github.com/nathakusuma/elevateu-backend/pkg/validator"
 )
 
@@ -170,6 +171,40 @@ func (h *mentoringHandler) handleWebSocket(conn *websocket.Conn) {
 		return
 	}
 
+	// Set ping/pong handlers
+	pingInterval := 30 * time.Second
+	pongWait := 60 * time.Second
+
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	go func() {
+		pingTicker := time.NewTicker(pingInterval)
+		defer pingTicker.Stop()
+
+		for range pingTicker.C {
+			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second)); err != nil {
+				if websocket.IsCloseError(err,
+					websocket.CloseNormalClosure,
+					websocket.CloseGoingAway,
+					websocket.CloseAbnormalClosure) {
+					return
+				}
+
+				log.Error(context.Background(), map[string]interface{}{
+					"error":   err,
+					"user.id": userID,
+					"chat.id": chatID,
+				}, "Failed to send ping")
+				return
+			}
+		}
+	}()
+
+	conn.SetReadDeadline(time.Now().Add(pongWait))
+
 	h.svc.RegisterClient(userID, chatID, conn)
 
 	var (
@@ -183,7 +218,18 @@ func (h *mentoringHandler) handleWebSocket(conn *websocket.Conn) {
 
 	for {
 		if _, msg, err = conn.ReadMessage(); err != nil {
-			conn.WriteJSON(errorpkg.ErrFailReadMessage)
+			if websocket.IsCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseGoingAway,
+				websocket.CloseAbnormalClosure) {
+				break
+			}
+
+			log.Error(context.Background(), map[string]interface{}{
+				"error":   err,
+				"user.id": userID,
+				"chat.id": chatID,
+			}, "WebSocket read error")
 			break
 		}
 
